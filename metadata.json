@@ -1,0 +1,6 @@
+{
+  "name": "RAWF - Raid Action Wing Foundation",
+  "description": "Raid Action Wing Foundation (RAWF) - Autonomous Citizen Vigilance, Crime & Anti-Corruption Network, Public Grievance Cell, and Human Rights Legal Aid.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --police-blue: #0d47a1;
+    --police-dark: #0a192f;
+    --primary-red: #dc2626;
+    --amber-integrity: #d97706;
+    --radar-green: #16a34a;
+  }
+
+  *, *::before, *::after {
+    font-family: 'Poppins', sans-serif;
+  }
+
+  html, body {
+    scroll-behavior: smooth;
+    font-family: 'Poppins', sans-serif !important;
+  }
+
+  h1, h2, h3, h4, h5, h6, .font-headline, button, input, select, textarea, span, p, a, div {
+    font-family: 'Poppins', sans-serif !important;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
