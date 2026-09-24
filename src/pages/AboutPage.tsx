@@ -55,7 +55,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onNavigate }) => {
             {/* Core Objectives List */}
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 space-y-4">
               <h3 className="font-headline font-bold text-lg text-slate-900 uppercase tracking-tight flex items-center gap-2">
-                <span className="material-symbols-outlined text-red-600">target</span>
+                <span className="material-symbols-outlined text-red-600">crisis_alert</span>
                 Core Objectives of RAWF
               </h3>
               <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm">

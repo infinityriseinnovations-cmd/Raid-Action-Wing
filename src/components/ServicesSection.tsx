@@ -16,7 +16,7 @@ const servicesData: ServiceItem[] = [
     id: 'confidential-info',
     title: 'Confidential Information',
     wingCode: 'WING: SEC-INT',
-    icon: 'encrypted',
+    icon: 'lock',
     badge: 'CLASSIFIED WING',
     image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAz4wFoVz11in_IGPjkes78eAHpnkyEfA5ZXwqE1KWP1VKjyVruWtz0nej_i2ocj5sfgwBSCjEHNU4hlGnX-qZUaD0oLbQwV-EKukFGywaIKIDSJnVlZrJGmfx-q0etbDziMgGbkfoLzCSHqWl4OhAnx2C_PB_fPL11yUmQFfcEHGaF2HwGrBL06gNLCBYR5gx9qeQVlQocvBZIMB5sbkcLf3Yjoxenu8aDnKWqhOIXw8H53syAQdHrBQlB8Q2-vPQoJ2o',
     description: 'Reputed intelligence officers and covert informer network gathering actionable, classified surveillance intelligence across illicit syndicates and compromised administrative wings.',

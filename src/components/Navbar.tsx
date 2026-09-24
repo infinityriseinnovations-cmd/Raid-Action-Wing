@@ -52,6 +52,15 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           <div className="flex items-center gap-3 text-blue-100 text-xs">
             <button
+              onClick={() => handleNavClick('admin')}
+              className="hidden lg:inline-flex items-center gap-1 bg-amber-600/90 hover:bg-amber-600 text-white px-2 py-0.5 rounded font-bold transition-colors cursor-pointer text-[11px]"
+              title="Director General Admin Command"
+            >
+              <span className="material-symbols-outlined text-[13px]">admin_panel_settings</span>
+              <span>Admin</span>
+            </button>
+            <span className="hidden lg:inline text-blue-300/40">|</span>
+            <button
               onClick={() => handleNavClick('apply-online')}
               className="hidden sm:inline-flex items-center gap-1 bg-red-600 hover:bg-red-700 text-white px-2.5 py-0.5 rounded font-bold transition-colors cursor-pointer"
             >
@@ -422,6 +431,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                 className="px-3 py-2 hover:bg-slate-50 rounded text-left cursor-pointer"
               >
                 Contact Us
+              </button>
+              <button
+                onClick={() => handleNavClick('admin')}
+                className="px-3 py-2 hover:bg-amber-50 rounded text-left cursor-pointer text-amber-700 font-bold flex items-center gap-1.5"
+              >
+                <span className="material-symbols-outlined text-[16px]">admin_panel_settings</span>
+                <span>Admin Command Console</span>
               </button>
               <button
                 onClick={() => handleNavClick('donate')}

@@ -134,13 +134,14 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
           <span>© 2026 Raid Action Wing Foundation (RAWF). All rights reserved.</span>
           <div className="flex items-center space-x-4">
             <button onClick={() => handleNav('privacy')} className="hover:text-white transition-colors cursor-pointer">
-              Privacy & Telemetry Policy
-            </button>
-            <button onClick={() => handleNav('terms')} className="hover:text-white transition-colors cursor-pointer">
-              Terms of Vigilance
+              Privacy Policy
             </button>
             <button onClick={() => handleNav('contact')} className="hover:text-white transition-colors cursor-pointer">
               Contact Desk
+            </button>
+            <button onClick={() => handleNav('admin')} className="text-amber-400 hover:text-amber-300 transition-colors cursor-pointer font-bold flex items-center gap-1">
+              <span className="material-symbols-outlined text-[14px]">admin_panel_settings</span>
+              <span>Admin Console</span>
             </button>
           </div>
         </div>

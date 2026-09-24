@@ -79,11 +79,11 @@ export const MembershipApplySection: React.FC = () => {
                   01
                 </span>
                 <h4 className="font-bold text-sm text-slate-900">
-                  Civil Vigilance Officer (CVO)
+                  ✔️ National Level Command
                 </h4>
               </div>
               <p className="text-xs text-slate-600 pl-9 leading-relaxed">
-                Undergo police background clearance, oath of constitutional vigilance, and obtain field mandate for anti-graft observation.
+                Appointed posts: <strong>National Secretary</strong>, <strong>National Investigation Officer</strong>, and <strong>National Co-ordinator</strong>. Oversees inter-state task divisions, central coordination, and apex whistleblower defense.
               </p>
             </div>
 
@@ -93,11 +93,11 @@ export const MembershipApplySection: React.FC = () => {
                   02
                 </span>
                 <h4 className="font-bold text-sm text-slate-900">
-                  Legal Aid & Advocacy Volunteer
+                  ✔️ State Level Directorate
                 </h4>
               </div>
               <p className="text-xs text-slate-600 pl-9 leading-relaxed">
-                Lawyers, law graduates, and paralegals assisting unprivileged victims with writ petitions, bail documentation, and RTI filing.
+                Appointed posts: <strong>State Director</strong>, <strong>State President</strong>, <strong>State Incharge</strong>, <strong>State Investigation Officer</strong>, and <strong>State Information Officer</strong> across territorial states.
               </p>
             </div>
 
@@ -107,11 +107,11 @@ export const MembershipApplySection: React.FC = () => {
                   03
                 </span>
                 <h4 className="font-bold text-sm text-slate-900">
-                  Cyber Crime & OSINT Investigator
+                  ✔️ District Level Command
                 </h4>
               </div>
               <p className="text-xs text-slate-600 pl-9 leading-relaxed">
-                Ethical tech analysts tracing financial scam operations, illegal crypto swindles, and online women harassment networks.
+                Appointed posts: <strong>District Director</strong>, <strong>Districts Chief</strong>, <strong>District Incharge</strong>, <strong>Investigation Officer</strong>, and <strong>Information Officer</strong> leading local vigilance desks.
               </p>
             </div>
 
@@ -121,11 +121,11 @@ export const MembershipApplySection: React.FC = () => {
                   04
                 </span>
                 <h4 className="font-bold text-sm text-slate-900">
-                  Youth & Student Ambassador
+                  Official Accreditation & ID Card
                 </h4>
               </div>
               <p className="text-xs text-slate-600 pl-9 leading-relaxed">
-                Lead campus anti-narcotics workshops and public legal awareness campaigns across district schools and universities.
+                Upon police background clearance and affirmation of the RAWF Oath of Ethics under IFA 760, accredited officers receive an official cryptographic digital ID badge.
               </p>
             </div>
           </div>
@@ -194,7 +194,7 @@ export const MembershipApplySection: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-xs font-bold uppercase text-slate-700 mb-1">
-                      Desired Role / Wing *
+                      Desired Role / Designation *
                     </label>
                     <select
                       required
@@ -202,12 +202,29 @@ export const MembershipApplySection: React.FC = () => {
                       onChange={(e) => setWing(e.target.value)}
                       className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0d47a1]"
                     >
-                      <option value="">Select Wing...</option>
-                      <option value="CVO">Civil Vigilance Officer (CVO)</option>
-                      <option value="Legal">Legal Aid & Advocacy Volunteer</option>
-                      <option value="Cyber">Cyber Crime Forensics Volunteer</option>
-                      <option value="Youth">Youth & Anti-Narcotics Ambassador</option>
-                      <option value="HumanRights">Human Rights Field Representative</option>
+                      <option value="">Select Level & Designation...</option>
+
+                      <optgroup label="✔️ District level">
+                        <option value="District Director">1) District Director</option>
+                        <option value="Districts Chief">2) Districts Chief</option>
+                        <option value="District Incharge">3) District Incharge</option>
+                        <option value="Investigation Officer">4) Investigation Officer</option>
+                        <option value="Information officer">5) Information officer</option>
+                      </optgroup>
+
+                      <optgroup label="✔️ State level">
+                        <option value="State Director">1) State Director</option>
+                        <option value="State President">2) State President</option>
+                        <option value="State Incharge">3) State Incharge</option>
+                        <option value="State Investigation Officer">4) State Investigation Officer</option>
+                        <option value="State Information Officer">5) State Information Officer</option>
+                      </optgroup>
+
+                      <optgroup label="✔️ National level">
+                        <option value="National Secretary">1) National Secretary</option>
+                        <option value="National Investigation Officer">2) National Investigation Officer</option>
+                        <option value="National co-ordinator">3) National co-ordinator</option>
+                      </optgroup>
                     </select>
                   </div>
                 </div>

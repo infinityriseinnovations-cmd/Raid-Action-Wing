@@ -34,6 +34,7 @@ import { GrievanceCellPage } from './pages/GrievanceCellPage';
 import { ActivitiesPage } from './pages/ActivitiesPage';
 import { ContactPage } from './pages/ContactPage';
 import { ApplyOnlinePage } from './pages/ApplyOnlinePage';
+import { AdminPage } from './pages/AdminPage';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<string>('home');
@@ -58,6 +59,7 @@ export default function App() {
       else if (hash === 'activities-page') setCurrentPage('activities');
       else if (hash === 'apply-online-page') setCurrentPage('apply-online');
       else if (hash === 'contact-page') setCurrentPage('contact');
+      else if (hash === 'admin' || hash === 'admin-portal') setCurrentPage('admin');
     };
 
     window.addEventListener('hashchange', handleHash);
@@ -221,6 +223,10 @@ export default function App() {
 
         {currentPage === 'contact' && (
           <ContactPage onNavigate={handleNavigate} />
+        )}
+
+        {currentPage === 'admin' && (
+          <AdminPage onNavigate={handleNavigate} />
         )}
 
         {currentPage === 'events' && (

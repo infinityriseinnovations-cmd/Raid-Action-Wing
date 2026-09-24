@@ -84,7 +84,7 @@ export const ServicesPage: React.FC<ServicesPageProps> = ({
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-fadeIn">
             <div className="lg:col-span-8 space-y-5">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-blue-50 text-[#0d47a1] font-mono text-xs font-bold uppercase">
-                <span className="material-symbols-outlined text-[16px]">encrypted</span>
+                <span className="material-symbols-outlined text-[16px]">lock</span>
                 WING: SEC-INT • CLASSIFIED WHISTLEBLOWER PROTOCOL
               </div>
 
