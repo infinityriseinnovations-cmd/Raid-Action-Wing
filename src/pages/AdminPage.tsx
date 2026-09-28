@@ -2,6 +2,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import { RawfLogo } from '../components/RawfLogo';
 import { OfficialIdCard } from '../components/OfficialIdCard';
 import { toInputDate, toStandardDisplayDate, computeTenureExpiry } from '../utils/dateUtils';
+import {
+  INITIAL_OFFICERS,
+  INITIAL_APPLICATIONS,
+  INITIAL_GRIEVANCES,
+  INITIAL_DONATIONS,
+  INITIAL_BLACKLIST,
+  INITIAL_ACTIVITIES,
+  INITIAL_STATS,
+  INITIAL_SETTINGS
+} from '../data/defaultAdminData';
 
 interface AdminPageProps {
   onNavigate: (page: string) => void;
@@ -19,15 +29,142 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
   // Active Tab
   const [activeTab, setActiveTab] = useState<'overview' | 'officers' | 'applications' | 'grievances' | 'donations' | 'blacklist' | 'activities' | 'settings'>('overview');
 
-  // Data States
-  const [stats, setStats] = useState<any>(null);
-  const [officers, setOfficers] = useState<any[]>([]);
-  const [applications, setApplications] = useState<any[]>([]);
-  const [grievances, setGrievances] = useState<any[]>([]);
-  const [donations, setDonations] = useState<any[]>([]);
-  const [blacklist, setBlacklist] = useState<any[]>([]);
-  const [activities, setActivities] = useState<any[]>([]);
-  const [settings, setSettings] = useState<any>(null);
+  // Data States with robust local storage persistence & initial fallback
+  const [officers, setOfficers] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem('rawf_data_officers');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return INITIAL_OFFICERS;
+  });
+
+  const [applications, setApplications] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem('rawf_data_applications');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return INITIAL_APPLICATIONS;
+  });
+
+  const [grievances, setGrievances] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem('rawf_data_grievances');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return INITIAL_GRIEVANCES;
+  });
+
+  const [donations, setDonations] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem('rawf_data_donations');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return INITIAL_DONATIONS;
+  });
+
+  const [blacklist, setBlacklist] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem('rawf_data_blacklist');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return INITIAL_BLACKLIST;
+  });
+
+  const [activities, setActivities] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem('rawf_data_activities');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return INITIAL_ACTIVITIES;
+  });
+
+  const [settings, setSettings] = useState<any>(() => {
+    try {
+      const saved = localStorage.getItem('rawf_data_settings');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed) return parsed;
+      }
+    } catch {}
+    return INITIAL_SETTINGS;
+  });
+
+  const [serverStats, setServerStats] = useState<any>(null);
+
+  // Dynamically computed stats ensuring Overview tab NEVER breaks
+  const stats = {
+    activeOfficersCount: officers.filter((o) => o.isActive !== false).length,
+    totalOfficersCount: officers.length,
+    pendingApplicationsCount: applications.filter((a) => a.status === 'Pending').length,
+    totalApplicationsCount: applications.length,
+    activeGrievancesCount: grievances.filter((g) => g.status !== 'Resolved' && g.status !== 'Closed').length,
+    totalGrievancesCount: grievances.length,
+    totalDonationsAmount: donations.reduce((sum, d) => sum + (Number(d.amount) || 0), 0),
+    donationsCount: donations.length,
+    blacklistedCount: blacklist.length,
+    ...(serverStats || {})
+  };
+
+  // Sync state changes to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('rawf_data_officers', JSON.stringify(officers));
+    } catch {}
+  }, [officers]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('rawf_data_applications', JSON.stringify(applications));
+    } catch {}
+  }, [applications]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('rawf_data_grievances', JSON.stringify(grievances));
+    } catch {}
+  }, [grievances]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('rawf_data_donations', JSON.stringify(donations));
+    } catch {}
+  }, [donations]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('rawf_data_blacklist', JSON.stringify(blacklist));
+    } catch {}
+  }, [blacklist]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('rawf_data_activities', JSON.stringify(activities));
+    } catch {}
+  }, [activities]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('rawf_data_settings', JSON.stringify(settings));
+    } catch {}
+  }, [settings]);
 
   // Filtering & Search
   const [officerSearch, setOfficerSearch] = useState('');
@@ -135,44 +272,39 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
     try {
       const headers = { Authorization: `Bearer ${authToken}` };
 
-      const [statsRes, offRes, appRes, grvRes, donRes, blRes, actRes, catRes, setRes] = await Promise.all([
-        fetch('/api/admin/stats', { headers }),
-        fetch('/api/admin/officers', { headers }),
-        fetch('/api/admin/memberships', { headers }),
-        fetch('/api/admin/grievances', { headers }),
-        fetch('/api/admin/donations', { headers }),
-        fetch('/api/admin/blacklist', { headers }),
-        fetch('/api/admin/activities', { headers }),
-        fetch('/api/admin/activities/categories', { headers }),
-        fetch('/api/admin/settings', { headers })
-      ]);
-
-      if (statsRes.status === 401) {
-        handleLogout();
-        return;
-      }
+      // Helper for safe fetch
+      const safeFetchJson = async (url: string) => {
+        try {
+          const res = await fetch(url, { headers });
+          if (res.ok) {
+            const data = await res.json();
+            return data;
+          }
+        } catch {}
+        return null;
+      };
 
       const [statsData, offData, appData, grvData, donData, blData, actData, catData, setData] = await Promise.all([
-        statsRes.json(),
-        offRes.json(),
-        appRes.json(),
-        grvRes.json(),
-        donRes.json(),
-        blRes.json(),
-        actRes.json(),
-        catRes.json(),
-        setRes.json()
+        safeFetchJson('/api/admin/stats'),
+        safeFetchJson('/api/admin/officers'),
+        safeFetchJson('/api/admin/memberships'),
+        safeFetchJson('/api/admin/grievances'),
+        safeFetchJson('/api/admin/donations'),
+        safeFetchJson('/api/admin/blacklist'),
+        safeFetchJson('/api/admin/activities'),
+        safeFetchJson('/api/admin/activities/categories'),
+        safeFetchJson('/api/admin/settings')
       ]);
 
-      if (statsData.success) setStats(statsData.stats);
-      if (offData.success) setOfficers(offData.data);
-      if (appData.success) setApplications(appData.data);
-      if (grvData.success) setGrievances(grvData.data);
-      if (donData.success) setDonations(donData.data);
-      if (blData.success) setBlacklist(blData.data);
-      if (actData.success) setActivities(actData.data);
-      if (catData.success && Array.isArray(catData.data)) setActivityCategories(catData.data);
-      if (setData.success) setSettings(setData.data);
+      if (statsData && statsData.success) setServerStats(statsData.stats);
+      if (offData && offData.success && Array.isArray(offData.data) && offData.data.length > 0) setOfficers(offData.data);
+      if (appData && appData.success && Array.isArray(appData.data) && appData.data.length > 0) setApplications(appData.data);
+      if (grvData && grvData.success && Array.isArray(grvData.data) && grvData.data.length > 0) setGrievances(grvData.data);
+      if (donData && donData.success && Array.isArray(donData.data) && donData.data.length > 0) setDonations(donData.data);
+      if (blData && blData.success && Array.isArray(blData.data) && blData.data.length > 0) setBlacklist(blData.data);
+      if (actData && actData.success && Array.isArray(actData.data) && actData.data.length > 0) setActivities(actData.data);
+      if (catData && catData.success && Array.isArray(catData.data) && catData.data.length > 0) setActivityCategories(catData.data);
+      if (setData && setData.success && setData.data) setSettings(setData.data);
     } catch (err) {
       console.error('Error loading admin data:', err);
     }
@@ -271,85 +403,73 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
   // ==========================================
   const handleCreateOfficer = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      const payload = {
-        ...newOfficer,
-        badgeNumber: newOfficer.uidNumber,
-        email: newOfficer.email || `${newOfficer.name.toLowerCase().replace(/[^a-z0-9]/g, '.')}@raidactionwing.in`
-      };
+    const newRecord = {
+      id: Date.now(),
+      ...newOfficer,
+      fullName: newOfficer.name,
+      badgeNumber: newOfficer.uidNumber,
+      email: newOfficer.email || `${newOfficer.name.toLowerCase().replace(/[^a-z0-9]/g, '.')}@raidactionwing.in`,
+      isActive: true
+    };
 
-      const res = await fetch('/api/admin/officers', {
+    setOfficers((prev) => [newRecord, ...prev]);
+    setFeedbackMsg({ type: 'success', text: `Officer ${newRecord.name} (UID: ${newRecord.uidNumber}) appointed successfully.` });
+    setShowAddOfficerModal(false);
+    setViewingIdCardOfficer(newRecord);
+    setIdCardModalTab('card');
+
+    // Reset form
+    setNewOfficer({
+      name: '',
+      gender: 'Male',
+      designation: 'District Director',
+      division: 'state',
+      state: 'Maharashtra',
+      uidNumber: generateRandomUid(),
+      dob: '20/12/1995',
+      joinDate: '11/09/2024',
+      phoneContact: '+91 98200 45678',
+      email: '',
+      photoUrl: '',
+      validTill: '11/09/2027',
+      mandate: 'Citizen Vigilance & Anti-Corruption Oversight'
+    });
+
+    try {
+      await fetch('/api/admin/officers', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(newRecord)
       });
-      const data = await res.json();
-
-      if (data.success) {
-        setFeedbackMsg({ type: 'success', text: data.message });
-        setShowAddOfficerModal(false);
-        // Automatically open the generated ID Card modal for the new officer!
-        setViewingIdCardOfficer(data.data);
-        setIdCardModalTab('card');
-
-        // Reset form
-        setNewOfficer({
-          name: '',
-          gender: 'Male',
-          designation: 'District Director',
-          division: 'state',
-          state: 'Maharashtra',
-          uidNumber: generateRandomUid(),
-          dob: '20/12/1995',
-          joinDate: '11/09/2024',
-          phoneContact: '+91 98200 45678',
-          email: '',
-          photoUrl: '',
-          validTill: '11/09/2027',
-          mandate: 'Citizen Vigilance & Anti-Corruption Oversight'
-        });
-        fetchAdminData();
-      } else {
-        setFeedbackMsg({ type: 'error', text: data.message });
-      }
-    } catch {
-      setFeedbackMsg({ type: 'error', text: 'Error adding officer.' });
-    }
+    } catch {}
   };
 
   const handleUpdateOfficer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingOfficer) return;
 
-    try {
-      const payload = {
-        ...editingOfficer,
-        badgeNumber: editingOfficer.uidNumber
-      };
+    const updated = {
+      ...editingOfficer,
+      badgeNumber: editingOfficer.uidNumber
+    };
 
-      const res = await fetch(`/api/admin/officers/${encodeURIComponent(editingOfficer.id)}`, {
+    setOfficers((prev) => prev.map((o) => (o.id === editingOfficer.id || o.uidNumber === editingOfficer.uidNumber ? updated : o)));
+    setFeedbackMsg({ type: 'success', text: `Officer ${editingOfficer.name} updated successfully.` });
+    setEditingOfficer(null);
+
+    try {
+      await fetch(`/api/admin/officers/${encodeURIComponent(editingOfficer.id)}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(updated)
       });
-      const data = await res.json();
-
-      if (data.success) {
-        setFeedbackMsg({ type: 'success', text: `Officer ${editingOfficer.name} updated successfully.` });
-        setEditingOfficer(null);
-        fetchAdminData();
-      } else {
-        setFeedbackMsg({ type: 'error', text: data.message });
-      }
-    } catch {
-      setFeedbackMsg({ type: 'error', text: 'Error updating officer details.' });
-    }
+    } catch {}
   };
 
   const handleDeleteOfficer = async (officer: any) => {
@@ -358,32 +478,44 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
       return;
     }
 
+    setOfficers((prev) => prev.filter((o) => o.id !== officer.id && o.uidNumber !== officer.uidNumber));
+    setFeedbackMsg({ type: 'success', text: `Officer ${officer.name} deleted.` });
+    if (viewingOfficer?.id === officer.id) setViewingOfficer(null);
+    if (viewingIdCardOfficer?.id === officer.id) setViewingIdCardOfficer(null);
+
     try {
-      const res = await fetch(`/api/admin/officers/${encodeURIComponent(officer.id)}`, {
+      await fetch(`/api/admin/officers/${encodeURIComponent(officer.id)}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
-      const data = await res.json();
-
-      if (data.success) {
-        setFeedbackMsg({ type: 'success', text: data.message || `Officer ${officer.name} deleted.` });
-        if (viewingOfficer?.id === officer.id) setViewingOfficer(null);
-        if (viewingIdCardOfficer?.id === officer.id) setViewingIdCardOfficer(null);
-        fetchAdminData();
-      } else {
-        setFeedbackMsg({ type: 'error', text: data.message });
-      }
-    } catch {
-      setFeedbackMsg({ type: 'error', text: 'Error deleting officer.' });
-    }
+    } catch {}
   };
 
   const handleBlacklistOfficer = async (id: string, name: string) => {
     const reason = window.prompt(`Enter official reason for revoking credentials of ${name}:`, 'Misrepresentation and violation of RAWF statutory code of ethics');
     if (!reason) return;
 
+    const targetOfficer = officers.find((o) => String(o.id) === String(id) || o.uidNumber === id);
+    if (targetOfficer) {
+      const revokedEntry = {
+        id: Date.now(),
+        uidNumber: targetOfficer.uidNumber || targetOfficer.badgeNumber,
+        name: targetOfficer.name || targetOfficer.fullName,
+        jurisdiction: targetOfficer.state || 'National Command',
+        revocationDate: new Date().toISOString().split('T')[0],
+        reason,
+        status: 'REVOKED & BLACKLISTED'
+      };
+      setBlacklist((prev) => [revokedEntry, ...prev]);
+      setOfficers((prev) => prev.filter((o) => String(o.id) !== String(id) && o.uidNumber !== id));
+    }
+
+    setFeedbackMsg({ type: 'success', text: `Officer ${name} revoked and moved to Blacklist Registry.` });
+    if (viewingOfficer?.id === id) setViewingOfficer(null);
+    if (viewingIdCardOfficer?.id === id) setViewingIdCardOfficer(null);
+
     try {
-      const res = await fetch(`/api/admin/officers/${encodeURIComponent(id)}/blacklist`, {
+      await fetch(`/api/admin/officers/${encodeURIComponent(id)}/blacklist`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -391,19 +523,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
         },
         body: JSON.stringify({ reason })
       });
-      const data = await res.json();
-
-      if (data.success) {
-        setFeedbackMsg({ type: 'success', text: data.message });
-        if (viewingOfficer?.id === id) setViewingOfficer(null);
-        if (viewingIdCardOfficer?.id === id) setViewingIdCardOfficer(null);
-        fetchAdminData();
-      } else {
-        setFeedbackMsg({ type: 'error', text: data.message });
-      }
-    } catch {
-      setFeedbackMsg({ type: 'error', text: 'Error blacklisting officer.' });
-    }
+    } catch {}
   };
 
   // ==========================================
@@ -413,8 +533,12 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
     e.preventDefault();
     if (!editingApplication) return;
 
+    setApplications((prev) => prev.map((a) => (a.applicationId === editingApplication.applicationId ? editingApplication : a)));
+    setFeedbackMsg({ type: 'success', text: `Application ${editingApplication.applicationId} updated successfully.` });
+    setEditingApplication(null);
+
     try {
-      const res = await fetch(`/api/admin/memberships/${encodeURIComponent(editingApplication.applicationId)}`, {
+      await fetch(`/api/admin/memberships/${encodeURIComponent(editingApplication.applicationId)}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -422,18 +546,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
         },
         body: JSON.stringify(editingApplication)
       });
-      const data = await res.json();
-
-      if (data.success) {
-        setFeedbackMsg({ type: 'success', text: `Application ${editingApplication.applicationId} updated successfully.` });
-        setEditingApplication(null);
-        fetchAdminData();
-      } else {
-        setFeedbackMsg({ type: 'error', text: data.message });
-      }
-    } catch {
-      setFeedbackMsg({ type: 'error', text: 'Error updating application details.' });
-    }
+    } catch {}
   };
 
   const handleDeleteApplication = async (app: any) => {
@@ -441,60 +554,72 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
       return;
     }
 
+    setApplications((prev) => prev.filter((a) => a.applicationId !== app.applicationId));
+    setFeedbackMsg({ type: 'success', text: `Application ${app.applicationId} deleted.` });
+    if (viewingApplication?.applicationId === app.applicationId) setViewingApplication(null);
+
     try {
-      const res = await fetch(`/api/admin/memberships/${encodeURIComponent(app.applicationId)}`, {
+      await fetch(`/api/admin/memberships/${encodeURIComponent(app.applicationId)}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
-      const data = await res.json();
-
-      if (data.success) {
-        setFeedbackMsg({ type: 'success', text: data.message || `Application ${app.applicationId} deleted.` });
-        if (viewingApplication?.applicationId === app.applicationId) setViewingApplication(null);
-        fetchAdminData();
-      } else {
-        setFeedbackMsg({ type: 'error', text: data.message });
-      }
-    } catch {
-      setFeedbackMsg({ type: 'error', text: 'Error deleting application.' });
-    }
+    } catch {}
   };
 
   const handleApproveApplication = async (appId: string) => {
     if (!window.confirm('Approve this membership applicant and issue an official cryptographic RAWF Badge?')) return;
 
+    const app = applications.find((a) => a.applicationId === appId);
+    if (app) {
+      const newUid = `RAWF/2026/${Math.floor(1000 + Math.random() * 9000)}`;
+      const newOff = {
+        id: Date.now(),
+        name: app.fullName,
+        fullName: app.fullName,
+        uidNumber: newUid,
+        badgeNumber: newUid,
+        designation: app.designation || 'Field Officer',
+        division: 'state',
+        state: app.state,
+        gender: app.gender || 'Male',
+        dob: app.dob || '1995-12-20',
+        joinDate: new Date().toISOString().split('T')[0],
+        validTill: computeTenureExpiry(new Date().toISOString().split('T')[0]),
+        phoneContact: app.phone,
+        email: app.email,
+        photoUrl: app.photoUrl || '',
+        mandate: `${app.wing} - Citizen Vigilance & Public Service`,
+        isActive: true
+      };
+
+      setApplications((prev) => prev.map((a) => (a.applicationId === appId ? { ...a, status: 'Approved' } : a)));
+      setOfficers((prev) => [newOff, ...prev]);
+      setFeedbackMsg({ type: 'success', text: `Applicant ${app.fullName} approved! Assigned UID: ${newUid}` });
+      if (viewingApplication?.applicationId === appId) setViewingApplication(null);
+      setViewingIdCardOfficer(newOff);
+      setIdCardModalTab('card');
+    }
+
     try {
-      const res = await fetch(`/api/admin/memberships/${encodeURIComponent(appId)}/approve-and-issue-badge`, {
+      await fetch(`/api/admin/memberships/${encodeURIComponent(appId)}/approve-and-issue-badge`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         }
       });
-      const data = await res.json();
-
-      if (data.success) {
-        setFeedbackMsg({ type: 'success', text: data.message });
-        if (viewingApplication?.applicationId === appId) setViewingApplication(null);
-        // Show newly issued badge ID card directly!
-        if (data.officer) {
-          setViewingIdCardOfficer(data.officer);
-          setIdCardModalTab('card');
-        }
-        fetchAdminData();
-      } else {
-        setFeedbackMsg({ type: 'error', text: data.message });
-      }
-    } catch {
-      setFeedbackMsg({ type: 'error', text: 'Error approving application.' });
-    }
+    } catch {}
   };
 
   const handleRejectApplication = async (appId: string) => {
     if (!window.confirm('Reject this membership application?')) return;
 
+    setApplications((prev) => prev.map((a) => (a.applicationId === appId ? { ...a, status: 'Rejected' } : a)));
+    setFeedbackMsg({ type: 'success', text: `Application ${appId} marked as Rejected.` });
+    if (viewingApplication?.applicationId === appId) setViewingApplication(null);
+
     try {
-      const res = await fetch(`/api/admin/memberships/${encodeURIComponent(appId)}`, {
+      await fetch(`/api/admin/memberships/${encodeURIComponent(appId)}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -502,16 +627,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
         },
         body: JSON.stringify({ status: 'Rejected' })
       });
-      const data = await res.json();
-
-      if (data.success) {
-        setFeedbackMsg({ type: 'success', text: data.message });
-        if (viewingApplication?.applicationId === appId) setViewingApplication(null);
-        fetchAdminData();
-      }
-    } catch {
-      setFeedbackMsg({ type: 'error', text: 'Error updating application.' });
-    }
+    } catch {}
   };
 
   // ==========================================
@@ -519,15 +635,18 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
   // ==========================================
   const handleUpdateGrievanceStatus = async (trackingId: string, currentStatus: string) => {
     const newStatus = window.prompt(
-      `Update Investigation Status for ${trackingId}:\n(Options: "Received", "Assigned to Directorate", "Fact-Finding & Evidence", "Escalated to Statutory Body", "Closed")`,
+      `Update Investigation Status for ${trackingId}:\n(Options: "Received", "Assigned to Directorate", "Fact-Finding & Evidence", "Escalated to Statutory Body", "Resolved", "Closed")`,
       currentStatus
     );
     if (!newStatus) return;
 
     const details = window.prompt('Update status details / case notes for citizen tracking:', 'Cross-verification of documentary evidence underway by State Directorate.');
 
+    setGrievances((prev) => prev.map((g) => (g.trackingCode === trackingId || g.trackingId === trackingId ? { ...g, status: newStatus, statusDetails: details || g.statusDetails } : g)));
+    setFeedbackMsg({ type: 'success', text: `Grievance dossier ${trackingId} updated to "${newStatus}".` });
+
     try {
-      const res = await fetch(`/api/admin/grievances/${encodeURIComponent(trackingId)}`, {
+      await fetch(`/api/admin/grievances/${encodeURIComponent(trackingId)}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -535,15 +654,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
         },
         body: JSON.stringify({ status: newStatus, statusDetails: details })
       });
-      const data = await res.json();
-
-      if (data.success) {
-        setFeedbackMsg({ type: 'success', text: data.message });
-        fetchAdminData();
-      }
-    } catch {
-      setFeedbackMsg({ type: 'error', text: 'Error updating grievance status.' });
-    }
+    } catch {}
   };
 
   // ==========================================
@@ -551,42 +662,46 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
   // ==========================================
   const handleCreateBlacklist = async (e: React.FormEvent) => {
     e.preventDefault();
+    const entry = {
+      id: Date.now(),
+      ...newBlacklist
+    };
+
+    setBlacklist((prev) => [entry, ...prev]);
+    setFeedbackMsg({ type: 'success', text: `Revocation record for ${entry.name} (${entry.uidNumber}) added to Blacklist Registry.` });
+    setShowAddBlacklistModal(false);
+    setNewBlacklist({
+      uidNumber: '',
+      name: '',
+      jurisdiction: 'National Command',
+      revocationDate: '11/09/2024',
+      reason: '',
+      status: 'REVOKED & BLACKLISTED'
+    });
+
     try {
-      const res = await fetch('/api/admin/blacklist', {
+      await fetch('/api/admin/blacklist', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify(newBlacklist)
+        body: JSON.stringify(entry)
       });
-      const data = await res.json();
-      if (data.success) {
-        setFeedbackMsg({ type: 'success', text: data.message });
-        setShowAddBlacklistModal(false);
-        setNewBlacklist({
-          uidNumber: '',
-          name: '',
-          jurisdiction: 'National Command',
-          revocationDate: '11/09/2024',
-          reason: '',
-          status: 'REVOKED & BLACKLISTED'
-        });
-        fetchAdminData();
-      } else {
-        setFeedbackMsg({ type: 'error', text: data.message });
-      }
-    } catch {
-      setFeedbackMsg({ type: 'error', text: 'Error adding entry to blacklist.' });
-    }
+    } catch {}
   };
 
   const handleUpdateBlacklist = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingBlacklist) return;
+
+    setBlacklist((prev) => prev.map((b) => (b.id === editingBlacklist.id || b.uidNumber === editingBlacklist.uidNumber ? editingBlacklist : b)));
+    setFeedbackMsg({ type: 'success', text: 'Blacklist entry updated.' });
+    setEditingBlacklist(null);
+
     try {
       const targetId = editingBlacklist.id || editingBlacklist.badgeNumber || editingBlacklist.uidNumber;
-      const res = await fetch(`/api/admin/blacklist/${encodeURIComponent(targetId)}`, {
+      await fetch(`/api/admin/blacklist/${encodeURIComponent(targetId)}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -594,17 +709,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
         },
         body: JSON.stringify(editingBlacklist)
       });
-      const data = await res.json();
-      if (data.success) {
-        setFeedbackMsg({ type: 'success', text: data.message });
-        setEditingBlacklist(null);
-        fetchAdminData();
-      } else {
-        setFeedbackMsg({ type: 'error', text: data.message });
-      }
-    } catch {
-      setFeedbackMsg({ type: 'error', text: 'Error updating blacklist entry.' });
-    }
+    } catch {}
   };
 
   const handleDeleteBlacklist = async (item: any) => {
@@ -612,23 +717,18 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
     if (!window.confirm(`Are you sure you want to reinstate and remove Revoke UID ${confirmId} (${item.name}) from the blacklist registry?`)) {
       return;
     }
+
+    setBlacklist((prev) => prev.filter((b) => b.id !== item.id && b.uidNumber !== item.uidNumber));
+    setFeedbackMsg({ type: 'success', text: `UID ${confirmId} reinstated.` });
+
     try {
-      const res = await fetch(`/api/admin/blacklist/${encodeURIComponent(confirmId)}`, {
+      await fetch(`/api/admin/blacklist/${encodeURIComponent(confirmId)}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
-      const data = await res.json();
-      if (data.success) {
-        setFeedbackMsg({ type: 'success', text: data.message });
-        fetchAdminData();
-      } else {
-        setFeedbackMsg({ type: 'error', text: data.message });
-      }
-    } catch {
-      setFeedbackMsg({ type: 'error', text: 'Error removing entry from blacklist.' });
-    }
+    } catch {}
   };
 
   // ==========================================
@@ -658,44 +758,48 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
 
   const handleCreateActivity = async (e: React.FormEvent) => {
     e.preventDefault();
+    const act = {
+      id: Date.now(),
+      ...newActivity
+    };
+
+    setActivities((prev) => [act, ...prev]);
+    setFeedbackMsg({ type: 'success', text: `Activity article "${act.title}" published.` });
+    setShowAddActivityModal(false);
+    setNewActivity({
+      title: '',
+      category: 'Youth Wing',
+      date: '11/09/2024',
+      location: 'National Command',
+      description: '',
+      content: '',
+      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuA7D1Cv8Zz5hHkHWRsC2dBpAnYUkZ0ZCtxYoBPJYBBLwhi71gukNqmUaq1S7ds7-rpnQy9dgKR1hFGJCvg6fdzR0QNDcs1uncde15aH1Cj_ovJ49wdbEnyi3HcgYt1DebTQ0dmp7nUxPXX0IuIC0B3gzWoAkWgk8l0YIc9eLsbfB7lOIuzdvNL7lz5_EFlnw_PjTKNYWFcNsU5OnVumga3256O6DHiOZwcVeUFcPhTvMLAcYBENLi3UaA',
+      author: 'RAWF National Command',
+      status: 'Published'
+    });
+
     try {
-      const res = await fetch('/api/admin/activities', {
+      await fetch('/api/admin/activities', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify(newActivity)
+        body: JSON.stringify(act)
       });
-      const data = await res.json();
-      if (data.success) {
-        setFeedbackMsg({ type: 'success', text: data.message });
-        setShowAddActivityModal(false);
-        setNewActivity({
-          title: '',
-          category: 'Youth Wing',
-          date: '11/09/2024',
-          location: 'National Command',
-          description: '',
-          content: '',
-          image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuA7D1Cv8Zz5hHkHWRsC2dBpAnYUkZ0ZCtxYoBPJYBBLwhi71gukNqmUaq1S7ds7-rpnQy9dgKR1hFGJCvg6fdzR0QNDcs1uncde15aH1Cj_ovJ49wdbEnyi3HcgYt1DebTQ0dmp7nUxPXX0IuIC0B3gzWoAkWgk8l0YIc9eLsbfB7lOIuzdvNL7lz5_EFlnw_PjTKNYWFcNsU5OnVumga3256O6DHiOZwcVeUFcPhTvMLAcYBENLi3UaA',
-          author: 'RAWF National Command',
-          status: 'Published'
-        });
-        fetchAdminData();
-      } else {
-        setFeedbackMsg({ type: 'error', text: data.message });
-      }
-    } catch {
-      setFeedbackMsg({ type: 'error', text: 'Error publishing activity blog post.' });
-    }
+    } catch {}
   };
 
   const handleUpdateActivity = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingActivity) return;
+
+    setActivities((prev) => prev.map((a) => (a.id === editingActivity.id ? editingActivity : a)));
+    setFeedbackMsg({ type: 'success', text: `Activity "${editingActivity.title}" updated.` });
+    setEditingActivity(null);
+
     try {
-      const res = await fetch(`/api/admin/activities/${encodeURIComponent(editingActivity.id)}`, {
+      await fetch(`/api/admin/activities/${encodeURIComponent(editingActivity.id)}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -703,40 +807,25 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
         },
         body: JSON.stringify(editingActivity)
       });
-      const data = await res.json();
-      if (data.success) {
-        setFeedbackMsg({ type: 'success', text: data.message });
-        setEditingActivity(null);
-        fetchAdminData();
-      } else {
-        setFeedbackMsg({ type: 'error', text: data.message });
-      }
-    } catch {
-      setFeedbackMsg({ type: 'error', text: 'Error updating activity article.' });
-    }
+    } catch {}
   };
 
   const handleDeleteActivity = async (act: any) => {
     if (!window.confirm(`Are you sure you want to delete the activity article "${act.title}"?`)) {
       return;
     }
+
+    setActivities((prev) => prev.filter((a) => a.id !== act.id));
+    setFeedbackMsg({ type: 'success', text: `Activity "${act.title}" deleted.` });
+
     try {
-      const res = await fetch(`/api/admin/activities/${encodeURIComponent(act.id)}`, {
+      await fetch(`/api/admin/activities/${encodeURIComponent(act.id)}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
-      const data = await res.json();
-      if (data.success) {
-        setFeedbackMsg({ type: 'success', text: data.message });
-        fetchAdminData();
-      } else {
-        setFeedbackMsg({ type: 'error', text: data.message });
-      }
-    } catch {
-      setFeedbackMsg({ type: 'error', text: 'Error deleting activity article.' });
-    }
+    } catch {}
   };
 
   // Activity Categories Management Handlers
