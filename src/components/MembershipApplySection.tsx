@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { membershipApi } from '../services';
 
 export const MembershipApplySection: React.FC = () => {
   const [fullName, setFullName] = useState('');
@@ -26,21 +27,15 @@ export const MembershipApplySection: React.FC = () => {
     setErrorMsg('');
 
     try {
-      const res = await fetch('/api/memberships', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fullName,
-          gender,
-          mobile,
-          email,
-          wing,
-          state,
-          aadhaarNumber,
-          background
-        })
+      const data = await membershipApi.submit({
+        fullName,
+        mobile,
+        email,
+        wing,
+        state,
+        aadhaarNumber,
+        background
       });
-      const data = await res.json();
 
       if (data.success) {
         setSubmittedAppId(data.applicationId);

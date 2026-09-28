@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { contactApi } from '../services';
 
 interface ContactPageProps {
   onNavigate: (page: string) => void;
@@ -19,12 +20,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onNavigate }) => {
     setLoading(true);
     setErrorMsg('');
     try {
-      const res = await fetch('/api/contact', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, phone, email, subject, message })
-      });
-      const data = await res.json();
+      const data = await contactApi.sendMessage({ name, phone, email, subject, message });
       if (data.success) {
         setSubmitted(true);
       } else {

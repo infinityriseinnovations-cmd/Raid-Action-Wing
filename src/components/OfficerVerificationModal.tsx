@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { RawfLogo } from './RawfLogo';
+import { officersApi } from '../services';
 
 interface OfficerVerificationModalProps {
   isOpen: boolean;
@@ -36,12 +37,7 @@ export const OfficerVerificationModal: React.FC<OfficerVerificationModalProps> =
     setResult(null);
 
     try {
-      const res = await fetch('/api/officers/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: searchCode.trim() })
-      });
-      const data = await res.json();
+      const data = await officersApi.verify(searchCode.trim());
       setResult(data);
     } catch {
       // Fallback

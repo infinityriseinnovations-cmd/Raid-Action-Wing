@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { UpiPaymentCard, UPI_ID, BENEFICIARY_NAME } from './UpiPaymentCard';
 import { RawfLogo } from './RawfLogo';
+import { donationsApi } from '../services';
 
 export const DonateSection: React.FC = () => {
   const [selectedAmount, setSelectedAmount] = useState<number>(1500);
@@ -47,21 +48,16 @@ export const DonateSection: React.FC = () => {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/donations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          donorName: donorName || 'Honorable Supporter',
-          panNumber: panNumber || undefined,
-          donorPhone: donorPhone || undefined,
-          amount: finalAmount,
-          fund,
-          paymentMethod: 'Paytm UPI QR',
-          utrNumber: cleanUtr,
-          upiId: UPI_ID
-        })
+      const data = await donationsApi.record({
+        donorName: donorName || 'Honorable Supporter',
+        panNumber: panNumber || undefined,
+        donorPhone: donorPhone || undefined,
+        amount: finalAmount,
+        fund,
+        paymentMethod: 'Paytm UPI QR',
+        utrNumber: cleanUtr,
+        upiId: UPI_ID
       });
-      const data = await res.json();
 
       if (data.success && data.data) {
         setReceipt(data.data);

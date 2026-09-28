@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { grievanceApi } from '../services';
 
 interface ReportGrievanceSectionProps {
   prefillWingTitle?: string;
@@ -29,20 +30,15 @@ export const ReportGrievanceSection: React.FC<ReportGrievanceSectionProps> = ({ 
     setErrorMsg('');
 
     try {
-      const res = await fetch('/api/grievances', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          category,
-          state,
-          targetEntity,
-          narrative,
-          isAnonymous,
-          reporterName: isAnonymous ? undefined : reporterName,
-          reporterContact: isAnonymous ? undefined : reporterContact
-        })
+      const data = await grievanceApi.submit({
+        category,
+        state,
+        targetEntity,
+        narrative,
+        isAnonymous,
+        reporterName: isAnonymous ? undefined : reporterName,
+        reporterContact: isAnonymous ? undefined : reporterContact
       });
-      const data = await res.json();
 
       if (data.success) {
         setSubmittedRef(data.trackingId);

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { toStandardDisplayDate } from '../utils/dateUtils';
+import { activitiesApi } from '../services';
 
 interface ActivitiesPageProps {
   onNavigate: (page: string, subParam?: string) => void;
@@ -84,8 +85,7 @@ export const ActivitiesPage: React.FC<ActivitiesPageProps> = ({ onNavigate }) =>
   const [activeArticle, setActiveArticle] = useState<ActivityItem | null>(null);
 
   useEffect(() => {
-    fetch('/api/activities')
-      .then((res) => res.json())
+    activitiesApi.getAll()
       .then((data) => {
         if (data.success && Array.isArray(data.data) && data.data.length > 0) {
           setActivitiesList(data.data);
@@ -95,8 +95,7 @@ export const ActivitiesPage: React.FC<ActivitiesPageProps> = ({ onNavigate }) =>
         // Fallback to default
       });
 
-    fetch('/api/activities/categories')
-      .then((res) => res.json())
+    activitiesApi.getCategories()
       .then((data) => {
         if (data.success && Array.isArray(data.data) && data.data.length > 0) {
           setCategories(data.data);

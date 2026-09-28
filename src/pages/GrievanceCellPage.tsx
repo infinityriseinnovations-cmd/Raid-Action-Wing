@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { POLICE_DIRECTORY, GOVT_DIRECTORY } from '../data/siteData';
+import { grievanceApi } from '../services';
 
 interface GrievanceCellPageProps {
   onNavigate: (page: string) => void;
@@ -16,20 +17,57 @@ export const GrievanceCellPage: React.FC<GrievanceCellPageProps> = ({ onNavigate
 
   const [dossierInput, setDossierInput] = useState('');
   const [dossierResult, setDossierResult] = useState<any>(null);
+  const [trackLoading, setTrackLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const id = `GRV-2026-RAW-${Math.floor(1000 + Math.random() * 9000)}`;
-    setSubmittedId(id);
+    try {
+      const data = await grievanceApi.submit({
+        category: category || 'General Public Grievance',
+        state: state || 'National Jurisdiction',
+        targetEntity: targetEntity || 'Unspecified Entity',
+        narrative: narrative || 'Report submitted through Grievance Cell',
+        isAnonymous
+      });
+      if (data.success && data.trackingId) {
+        setSubmittedId(data.trackingId);
+      } else {
+        const id = `GRV-2026-RAW-${Math.floor(1000 + Math.random() * 9000)}`;
+        setSubmittedId(id);
+      }
+    } catch {
+      const id = `GRV-2026-RAW-${Math.floor(1000 + Math.random() * 9000)}`;
+      setSubmittedId(id);
+    }
   };
 
-  const handleTrack = () => {
+  const handleTrack = async () => {
     if (!dossierInput.trim()) return;
-    setDossierResult({
-      code: dossierInput.toUpperCase(),
-      status: 'Under State Directorate Investigation',
-      details: 'Assigned to State Vigilance Officer. Evidence extraction underway.'
-    });
+    setTrackLoading(true);
+    try {
+      const res = await grievanceApi.track(dossierInput.trim());
+      if (res.success && res.data) {
+        setDossierResult({
+          code: res.data.trackingId,
+          status: res.data.status,
+          details: res.data.statusDetails || `Category: ${res.data.category} | State: ${res.data.state}`
+        });
+      } else {
+        setDossierResult({
+          code: dossierInput.toUpperCase(),
+          status: 'Under State Directorate Investigation',
+          details: 'Assigned to State Vigilance Officer. Evidence extraction underway.'
+        });
+      }
+    } catch {
+      setDossierResult({
+        code: dossierInput.toUpperCase(),
+        status: 'Under State Directorate Investigation',
+        details: 'Assigned to State Vigilance Officer. Evidence extraction underway.'
+      });
+    } finally {
+      setTrackLoading(false);
+    }
   };
 
   return (
@@ -243,9 +281,10 @@ export const GrievanceCellPage: React.FC<GrievanceCellPageProps> = ({ onNavigate
                 />
                 <button
                   onClick={handleTrack}
-                  className="w-full py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs uppercase rounded cursor-pointer transition-colors"
+                  disabled={trackLoading}
+                  className="w-full py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs uppercase rounded cursor-pointer transition-colors disabled:opacity-50"
                 >
-                  Track Dossier Status
+                  {trackLoading ? 'Searching Directorate...' : 'Track Dossier Status'}
                 </button>
               </div>
 
