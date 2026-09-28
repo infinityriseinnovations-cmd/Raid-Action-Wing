@@ -4,6 +4,7 @@ import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import nodemailer from 'nodemailer';
+import mysql from 'mysql2/promise';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -800,6 +801,17 @@ async function startServer() {
     }
   });
 
+  // API 1F2: Download Production SQL Schema
+  app.get(['/api/download/sql', '/api/download-schema'], (_req, res) => {
+    const sqlPath = path.join(process.cwd(), 'public', 'rawf_production_schema.sql');
+    if (fs.existsSync(sqlPath)) {
+      res.setHeader('Content-Type', 'application/sql; charset=utf-8');
+      res.setHeader('Content-Disposition', 'attachment; filename="rawf_production_schema.sql"');
+      return res.sendFile(sqlPath);
+    }
+    return res.status(404).json({ success: false, message: 'SQL schema file not found.' });
+  });
+
   // API 1G: Upload / Replace Indian Law PDF Document (Admin)
   app.post('/api/admin/laws/upload', (req, res) => {
     const { lawId, fileName, pdfBase64, title } = req.body;
@@ -1321,6 +1333,82 @@ async function startServer() {
           user: smtpConfig.auth.user
         }
       });
+    }
+  });
+
+  // API 6F: Admin MySQL Database Diagnostic
+  app.post('/api/admin/test-db', requireAdminAuth, async (req, res) => {
+    const host = req.body.host || process.env.DB_HOST || '127.0.0.1';
+    const port = Number(req.body.port || process.env.DB_PORT) || 3306;
+    const user = req.body.user || process.env.DB_USER || '';
+    const password = req.body.password || process.env.DB_PASSWORD || '';
+    const database = req.body.database || process.env.DB_NAME || '';
+    const sslRequired = (req.body.ssl ?? process.env.DB_SSL) === 'true' || (req.body.ssl ?? process.env.DB_SSL) === true;
+
+    if (!user || !database) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing DB_USER or DB_NAME in environment configuration.',
+        config: { host, port, user: user || '(empty)', database: database || '(empty)' }
+      });
+    }
+
+    const startTime = Date.now();
+    let connection: mysql.Connection | null = null;
+
+    try {
+      connection = await mysql.createConnection({
+        host,
+        port,
+        user,
+        password,
+        database,
+        connectTimeout: 8000,
+        ssl: sslRequired ? { rejectUnauthorized: false } : undefined
+      });
+
+      const latency = Date.now() - startTime;
+      const [versionRows]: any = await connection.query('SELECT VERSION() AS version, @@character_set_database AS charset;');
+      const [tableRows]: any = await connection.query('SHOW TABLES;');
+      const tableKey = `Tables_in_${database}`;
+      const tables: string[] = tableRows.map((r: any) => r[tableKey] || Object.values(r)[0]);
+
+      const expected = ['officers', 'membership_applications', 'grievance_reports', 'activities'];
+      const missing = expected.filter((t) => !tables.includes(t));
+
+      res.json({
+        success: true,
+        message: `MySQL Database connected successfully at ${host}:${port} (${latency}ms latency).`,
+        latencyMs: latency,
+        serverVersion: versionRows?.[0]?.version || 'Unknown',
+        charset: versionRows?.[0]?.charset || 'Unknown',
+        tablesCount: tables.length,
+        tables,
+        schemaStatus: missing.length === 0 ? 'COMPLETE' : 'INCOMPLETE',
+        missingTables: missing,
+        config: { host, port, user, database, ssl: sslRequired }
+      });
+    } catch (err: any) {
+      let hint = 'Verify that your MySQL credentials in .env match your cPanel database configuration.';
+      if (err.code === 'ECONNREFUSED') {
+        hint = `Connection refused at ${host}:${port}. If using cPanel, set host to "127.0.0.1" or "localhost".`;
+      } else if (err.code === 'ER_ACCESS_DENIED_ERROR') {
+        hint = `Access denied for user "${user}". Confirm password and verify user is assigned to database with ALL PRIVILEGES.`;
+      } else if (err.code === 'ER_BAD_DB_ERROR') {
+        hint = `Database "${database}" not found. Verify cPanel prefix (e.g. cpaneluser_${database}).`;
+      }
+
+      res.status(500).json({
+        success: false,
+        message: `Database Connection Failed: ${err.message}`,
+        errorCode: err.code || 'UNKNOWN',
+        diagnosticHint: hint,
+        config: { host, port, user, database }
+      });
+    } finally {
+      if (connection) {
+        await connection.end();
+      }
     }
   });
 

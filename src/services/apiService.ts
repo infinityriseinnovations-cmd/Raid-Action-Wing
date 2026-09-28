@@ -460,6 +460,14 @@ export const adminApi = {
   uploadLawPdf: (data: { lawId: string; fileName: string; pdfBase64: string; title: string }, token: string) => {
     return apiClient.post<ApiResponse & { fileUrl: string }>('/api/admin/laws/upload', data, token);
   },
+
+  testDatabase: (token: string, overrides?: { host?: string; port?: number; user?: string; password?: string; database?: string; ssl?: boolean }) => {
+    return apiClient.post<ApiResponse>('/api/admin/test-db', overrides, token);
+  },
+
+  testSmtp: (token: string, targetEmail?: string) => {
+    return apiClient.post<ApiResponse>('/api/admin/test-smtp', { targetEmail }, token);
+  },
 };
 
 export default apiClient;

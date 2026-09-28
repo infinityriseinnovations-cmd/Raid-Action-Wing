@@ -1,6 +1,7 @@
 # ==============================================================================
 # RAID ACTION WING FOUNDATION (RAWF)
 # OPTIMIZED .HTACCESS FOR CPANEL / STACKCP / MULTI-HOSTING & SUBFOLDERS
+# Note: Rename this file to '.htaccess' when uploading to your server folder.
 # Compatible with: /public_html/ OR /public_html/rawf-portal/ OR Addon Domains
 # ==============================================================================
 
