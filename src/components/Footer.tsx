@@ -126,7 +126,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
         {/* Legal disclaimer snippet */}
         <div className="mt-8 pt-6 border-t border-slate-800 text-[11px] text-slate-400 leading-relaxed">
           <strong className="text-red-400 uppercase">Institutional Mandate & Non-Governmental Notice:</strong>{' '}
-          Raid Action Wing Foundation (RAWF) operates as an autonomous civic vigilance and human rights defense trust registered under the Indian Trusts Act 1882 (IFA 760). RAWF is not an official executive police agency. All criminal telemetry and evidence dossiers are systematically submitted to state and federal law enforcement agencies for statutory prosecution.
+          Raid Action Wing Foundation (RAWF) operates as a civic vigilance and human rights defense trust registered under the Indian Trusts Act 1882 (IFA 760). RAWF is not an official executive police agency. All criminal telemetry and evidence dossiers are systematically submitted to state and federal law enforcement agencies for statutory prosecution.
         </div>
 
         {/* Bottom copyright & policy links */}

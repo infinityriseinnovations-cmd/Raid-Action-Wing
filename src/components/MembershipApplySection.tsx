@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 
 export const MembershipApplySection: React.FC = () => {
   const [fullName, setFullName] = useState('');
+  const [gender, setGender] = useState('Male');
   const [mobile, setMobile] = useState('');
   const [email, setEmail] = useState('');
   const [wing, setWing] = useState('');
@@ -30,6 +31,7 @@ export const MembershipApplySection: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fullName,
+          gender,
           mobile,
           email,
           wing,
@@ -149,8 +151,8 @@ export const MembershipApplySection: React.FC = () => {
 
             {!submittedAppId ? (
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="sm:col-span-2">
                     <label className="block text-xs font-bold uppercase text-slate-700 mb-1">
                       Full Name (As per Aadhaar) *
                     </label>
@@ -165,6 +167,23 @@ export const MembershipApplySection: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-xs font-bold uppercase text-slate-700 mb-1">
+                      Gender *
+                    </label>
+                    <select
+                      value={gender}
+                      onChange={(e) => setGender(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0d47a1] font-semibold cursor-pointer"
+                    >
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-slate-700 mb-1">
                       Mobile / WhatsApp Number *
                     </label>
                     <input
@@ -176,9 +195,6 @@ export const MembershipApplySection: React.FC = () => {
                       className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0d47a1]"
                     />
                   </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold uppercase text-slate-700 mb-1">
                       Email Address *
@@ -192,6 +208,9 @@ export const MembershipApplySection: React.FC = () => {
                       className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0d47a1]"
                     />
                   </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold uppercase text-slate-700 mb-1">
                       Desired Role / Designation *
@@ -227,9 +246,7 @@ export const MembershipApplySection: React.FC = () => {
                       </optgroup>
                     </select>
                   </div>
-                </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold uppercase text-slate-700 mb-1">
                       State / UT Jurisdiction *

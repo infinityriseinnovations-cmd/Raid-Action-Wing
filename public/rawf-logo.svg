@@ -1,136 +1,191 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 600' width='600' height='600'>
   <defs>
-    <!-- Gradients -->
-    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#fef08a" />
-      <stop offset="50%" stop-color="#eab308" />
-      <stop offset="100%" stop-color="#a16207" />
+    <!-- Arcs for text on path -->
+    <!-- Top Blue Arc: RAID ACTION WING -->
+    <path id='arcEnglish' d='M 100 230 A 210 210 0 0 1 500 230' fill='none' />
+    <!-- Inner Red Arc: छापा कार्यवाही विभाग -->
+    <path id='arcHindi' d='M 125 240 A 175 175 0 0 1 475 240' fill='none' />
+    
+    <!-- Linear Gradients for realism -->
+    <linearGradient id='goldWheatGrad' x1='0%' y1='0%' x2='100%' y2='100%'>
+      <stop offset='0%' stop-color='#f59e0b'/>
+      <stop offset='50%' stop-color='#d97706'/>
+      <stop offset='100%' stop-color='#b45309'/>
     </linearGradient>
-    <linearGradient id="redRibbonGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#ef4444" />
-      <stop offset="50%" stop-color="#dc2626" />
-      <stop offset="100%" stop-color="#991b1b" />
+
+    <linearGradient id='greenLeafGrad' x1='0%' y1='0%' x2='100%' y2='100%'>
+      <stop offset='0%' stop-color='#22c55e'/>
+      <stop offset='50%' stop-color='#16a34a'/>
+      <stop offset='100%' stop-color='#15803d'/>
     </linearGradient>
-    <linearGradient id="greenLeaf" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#22c55e" />
-      <stop offset="100%" stop-color="#15803d" />
+
+    <linearGradient id='redRibbonGrad' x1='0%' y1='0%' x2='0%' y2='100%'>
+      <stop offset='0%' stop-color='#ef4444'/>
+      <stop offset='30%' stop-color='#dc2626'/>
+      <stop offset='80%' stop-color='#b91c1c'/>
+      <stop offset='100%' stop-color='#991b1b'/>
     </linearGradient>
-    <!-- Text Paths -->
-    <path id="curveTop" d="M 50 200 A 200 200 0 0 1 450 200" fill="none" />
-    <path id="curveSub" d="M 90 200 A 160 160 0 0 1 410 200" fill="none" />
-    <path id="curveRibbon" d="M 120 448 Q 250 478 380 448" fill="none" />
   </defs>
 
-  <!-- Background clean circle (optional subtle) -->
-  <circle cx="250" cy="250" r="240" fill="#ffffff" />
+  <!-- Clean Background -->
+  <rect width='600' height='600' fill='#ffffff'/>
 
-  <!-- Arched Title: RAID ACTION WING -->
-  <text font-family="'Space Grotesk', 'Impact', sans-serif" font-weight="900" font-size="34" fill="#1e40af" letter-spacing="3">
-    <textPath href="#curveTop" startOffset="50%" text-anchor="middle">
+  <!-- 1. TOP BLUE ARCH: RAID ACTION WING -->
+  <text font-family='Arial Black, Arial, sans-serif' font-weight='900' font-size='38' fill='#2563eb' letter-spacing='2'>
+    <textPath href='#arcEnglish' startOffset='50%' text-anchor='middle'>
       RAID ACTION WING
     </textPath>
   </text>
 
-  <!-- Arched Hindi: छापा कार्यवाही विभाग -->
-  <text font-family="'Poppins', 'Noto Sans Devanagari', sans-serif" font-weight="800" font-size="28" fill="#dc2626" letter-spacing="1">
-    <textPath href="#curveSub" startOffset="50%" text-anchor="middle">
+  <!-- 2. INNER RED ARCH: छापा कार्यवाही विभाग -->
+  <text font-family='Arial, sans-serif' font-weight='900' font-size='29' fill='#dc2626' letter-spacing='1'>
+    <textPath href='#arcHindi' startOffset='50%' text-anchor='middle'>
       छापा कार्यवाही विभाग
     </textPath>
   </text>
 
-  <!-- Golden Wheat Ears (Top Left & Top Right) -->
-  <g id="wheatLeft" transform="translate(110, 160) rotate(-25)">
-    <ellipse cx="0" cy="0" rx="14" ry="24" fill="url(#goldGrad)" />
-    <ellipse cx="-10" cy="-20" rx="10" ry="18" fill="url(#goldGrad)" />
-    <ellipse cx="10" cy="-20" rx="10" ry="18" fill="url(#goldGrad)" />
-    <ellipse cx="-8" cy="-42" rx="8" ry="16" fill="url(#goldGrad)" />
-    <ellipse cx="8" cy="-42" rx="8" ry="16" fill="url(#goldGrad)" />
-    <path d="M 0 25 L 0 -55" stroke="#ca8a04" stroke-width="3" />
-  </g>
+  <!-- 3. ASHOKA LION CAPITAL (Centered at 300, 230) -->
+  <g id='ashokaCapital' transform='translate(300, 230)'>
+    <!-- Lion Outlines & Furs in Navy Blue -->
+    <!-- Base Abacus Platform -->
+    <rect x='-80' y='105' width='160' height='12' rx='3' fill='#1e40af'/>
+    <rect x='-75' y='117' width='150' height='5' fill='#1e3a8a'/>
+    <!-- Ashoka Chakra on Abacus -->
+    <circle cx='0' cy='111' r='8' fill='#ffffff' stroke='#1e40af' stroke-width='1.5'/>
+    <circle cx='0' cy='111' r='2' fill='#1e40af'/>
+    <line x1='0' y1='103' x2='0' y2='119' stroke='#1e40af' stroke-width='1'/>
+    <line x1='-8' y1='111' x2='8' y2='111' stroke='#1e40af' stroke-width='1'/>
+    <line x1='-5.6' y1='105.4' x2='5.6' y2='116.6' stroke='#1e40af' stroke-width='1'/>
+    <line x1='-5.6' y1='116.6' x2='5.6' y2='105.4' stroke='#1e40af' stroke-width='1'/>
 
-  <g id="wheatRight" transform="translate(390, 160) scale(-1, 1) rotate(-25)">
-    <ellipse cx="0" cy="0" rx="14" ry="24" fill="url(#goldGrad)" />
-    <ellipse cx="-10" cy="-20" rx="10" ry="18" fill="url(#goldGrad)" />
-    <ellipse cx="10" cy="-20" rx="10" ry="18" fill="url(#goldGrad)" />
-    <ellipse cx="-8" cy="-42" rx="8" ry="16" fill="url(#goldGrad)" />
-    <ellipse cx="8" cy="-42" rx="8" ry="16" fill="url(#goldGrad)" />
-    <path d="M 0 25 L 0 -55" stroke="#ca8a04" stroke-width="3" />
-  </g>
+    <!-- Decorative animals on abacus side -->
+    <circle cx='-45' cy='111' r='3.5' fill='#ffffff'/>
+    <circle cx='45' cy='111' r='3.5' fill='#ffffff'/>
 
-  <!-- Ashoka Emblem Center (Stylized Triple Lion Capital) -->
-  <g transform="translate(250, 205)" id="lionCapital">
-    <!-- Center Lion -->
-    <path d="M -22 -65 C -25 -80, 25 -80, 22 -65 C 32 -55, 30 -35, 20 -25 C 24 -10, 15 15, 0 20 C -15 15, -24 -10, -20 -25 C -30 -35, -32 -55, -22 -65 Z" fill="#1e3a8a" />
-    <path d="M -15 -60 C -15 -72, 15 -72, 15 -60 C 22 -52, 20 -38, 12 -30 C 14 -15, 8 8, 0 12 C -8 8, -14 -15, -12 -30 C -20 -38, -22 -52, -15 -60 Z" fill="#ffffff" />
-    <!-- Facial details -->
-    <circle cx="-6" cy="-48" r="2.5" fill="#1e3a8a" />
-    <circle cx="6" cy="-48" r="2.5" fill="#1e3a8a" />
-    <polygon points="0,-42 -4,-36 4,-36" fill="#1e3a8a" />
-    <path d="M -7 -32 Q 0 -28 7 -32" stroke="#1e3a8a" stroke-width="2" fill="none" />
-    <path d="M 0 -28 L 0 -18" stroke="#1e3a8a" stroke-width="2" />
-    <path d="M -12 -22 Q -4 -16 -12 -8 M 12 -22 Q 4 -16 12 -8" stroke="#1e3a8a" stroke-width="1.8" fill="none" />
+    <!-- Central Lion Body & Chest Paws -->
+    <path d='M-28,105 L-28,45 C-28,30 -45,10 -35,-25 C-30,-45 -20,-75 0,-85 C20,-75 30,-45 35,-25 C45,10 28,30 28,45 L28,105 Z' fill='#ffffff' stroke='#1e40af' stroke-width='3.5'/>
+    <!-- Left Lion Profile -->
+    <path d='M-28,60 C-48,50 -70,25 -70,-20 C-70,-55 -45,-75 -25,-65 C-20,-45 -25,-10 -15,10 Z' fill='#ffffff' stroke='#1e40af' stroke-width='3'/>
+    <!-- Right Lion Profile -->
+    <path d='M28,60 C48,50 70,25 70,-20 C70,-55 45,-75 25,-65 C20,-45 25,-10 15,10 Z' fill='#ffffff' stroke='#1e40af' stroke-width='3'/>
+
+    <!-- Lion Mane Curls & Details -->
+    <!-- Left lion head details -->
+    <ellipse cx='-48' cy='-48' rx='16' ry='14' fill='#ffffff' stroke='#1e40af' stroke-width='2.5'/>
+    <path d='M-62,-54 Q-50,-62 -38,-50' stroke='#1e40af' stroke-width='3' fill='none'/>
+    <circle cx='-52' cy='-48' r='3' fill='#1e40af'/>
+    <path d='M-60,-40 Q-52,-35 -44,-40' stroke='#1e40af' stroke-width='2' fill='none'/>
+
+    <!-- Right lion head details -->
+    <ellipse cx='48' cy='-48' rx='16' ry='14' fill='#ffffff' stroke='#1e40af' stroke-width='2.5'/>
+    <path d='M62,-54 Q50,-62 38,-50' stroke='#1e40af' stroke-width='3' fill='none'/>
+    <circle cx='52' cy='-48' r='3' fill='#1e40af'/>
+    <path d='M60,-40 Q52,-35 44,-40' stroke='#1e40af' stroke-width='2' fill='none'/>
+
+    <!-- Center lion head -->
+    <ellipse cx='0' cy='-55' rx='28' ry='26' fill='#ffffff' stroke='#1e40af' stroke-width='3.5'/>
+    <!-- Ears -->
+    <path d='M-22,-75 C-28,-88 -14,-92 -8,-80 Z' fill='#ffffff' stroke='#1e40af' stroke-width='2.5'/>
+    <path d='M22,-75 C28,-88 14,-92 8,-80 Z' fill='#ffffff' stroke='#1e40af' stroke-width='2.5'/>
+    <!-- Snout & Nose -->
+    <polygon points='0,-55 -8,-45 8,-45' fill='#1e40af'/>
+    <circle cx='-11' cy='-60' r='3.5' fill='#1e40af'/>
+    <circle cx='11' cy='-60' r='3.5' fill='#1e40af'/>
+    <path d='M-18,-68 Q-10,-74 -2,-66' stroke='#1e40af' stroke-width='3' fill='none'/>
+    <path d='M18,-68 Q10,-74 2,-66' stroke='#1e40af' stroke-width='3' fill='none'/>
+    <path d='M-10,-38 Q0,-32 10,-38' stroke='#1e40af' stroke-width='3' fill='none'/>
+    <!-- Open mouth / teeth / tongue detail -->
+    <path d='M-6,-37 L-6,-32 L6,-32 L6,-37' fill='#1e40af'/>
+
+    <!-- Mane Curls Texture -->
+    <path d='M-22,-20 Q-15,-28 -8,-20 Q0,-28 8,-20 Q15,-28 22,-20' stroke='#1e40af' stroke-width='2.5' fill='none'/>
+    <path d='M-24,-2 Q-16,-10 -8,-2 Q0,-10 8,-2 Q16,-10 24,-2' stroke='#1e40af' stroke-width='2.5' fill='none'/>
+    <path d='M-22,16 Q-14,8 -6,16 Q0,8 6,16 Q14,8 22,16' stroke='#1e40af' stroke-width='2.5' fill='none'/>
+    <path d='M-24,34 Q-16,26 -8,34 Q0,26 8,34 Q16,26 24,34' stroke='#1e40af' stroke-width='2.5' fill='none'/>
+    <path d='M-22,52 Q-14,44 -6,52 Q0,44 6,52 Q14,44 22,52' stroke='#1e40af' stroke-width='2.5' fill='none'/>
+    <path d='M-24,70 Q-16,62 -8,70 Q0,62 8,70 Q16,62 24,70' stroke='#1e40af' stroke-width='2.5' fill='none'/>
+    <path d='M-22,88 Q-14,80 -6,88 Q0,80 6,88 Q14,80 22,88' stroke='#1e40af' stroke-width='2.5' fill='none'/>
     
-    <!-- Left Lion (Profile) -->
-    <path d="M -22 -55 C -38 -68, -55 -60, -58 -45 C -62 -30, -52 -18, -42 -12 C -45 2, -35 15, -20 18 C -22 5, -22 -20, -22 -55 Z" fill="#1e3a8a" />
-    <circle cx="-45" cy="-40" r="2.5" fill="#ffffff" />
-    <path d="M -50 -32 Q -44 -28 -38 -34" stroke="#ffffff" stroke-width="1.8" fill="none" />
-
-    <!-- Right Lion (Profile) -->
-    <path d="M 22 -55 C 38 -68, 55 -60, 58 -45 C 62 -30, 52 -18, 42 -12 C 45 2, 35 15, 20 18 C 22 5, 22 -20, 22 -55 Z" fill="#1e3a8a" />
-    <circle cx="45" cy="-40" r="2.5" fill="#ffffff" />
-    <path d="M 50 -32 Q 44 -28 38 -34" stroke="#ffffff" stroke-width="1.8" fill="none" />
-
-    <!-- Base Abacus -->
-    <rect x="-42" y="20" width="84" height="12" rx="3" fill="#1e3a8a" />
-    <circle cx="0" cy="26" r="4.5" fill="#ffffff" stroke="#1e3a8a" stroke-width="1.5" />
-    <line x1="-32" y1="26" x2="-14" y2="26" stroke="#ffffff" stroke-width="2" stroke-linecap="round" />
-    <line x1="14" y1="26" x2="32" y2="26" stroke="#ffffff" stroke-width="2" stroke-linecap="round" />
+    <!-- Chest Paws vertical ridges -->
+    <line x1='-14' y1='40' x2='-14' y2='105' stroke='#1e40af' stroke-width='2.5'/>
+    <line x1='14' y1='40' x2='14' y2='105' stroke='#1e40af' stroke-width='2.5'/>
+    <line x1='0' y1='48' x2='0' y2='105' stroke='#1e40af' stroke-width='2'/>
   </g>
 
-  <!-- Laurel Wreath Curving (Leaves along sides) -->
-  <g id="wreathGroup">
-    <!-- Left Branch -->
-    <g transform="translate(100, 270)">
-      <path d="M 20 120 C -20 60, -30 -40, 2 -90" stroke="#15803d" stroke-width="4" fill="none" />
-      <!-- Left Leaves -->
-      <path d="M 0 -80 C -15 -85, -20 -70, -5 -65 C -20 -60, -25 -45, -5 -40 C -25 -35, -30 -15, -8 -10 C -28 -5, -32 15, -10 20 C -25 25, -28 45, -8 50 C -20 58, -20 78, 2 82 C -10 90, -10 105, 12 110" fill="url(#greenLeaf)" stroke="#166534" stroke-width="1.5" />
-      <path d="M 5 -70 C 15 -75, 20 -60, 5 -55 C 20 -50, 25 -35, 5 -30 C 25 -25, 30 -5, 8 0 C 28 5, 32 25, 10 30 C 25 35, 28 55, 8 60 C 20 68, 20 88, -2 92" fill="url(#greenLeaf)" stroke="#166534" stroke-width="1.5" />
-    </g>
-    <!-- Right Branch -->
-    <g transform="translate(400, 270) scale(-1, 1)">
-      <path d="M 20 120 C -20 60, -30 -40, 2 -90" stroke="#15803d" stroke-width="4" fill="none" />
-      <!-- Right Leaves -->
-      <path d="M 0 -80 C -15 -85, -20 -70, -5 -65 C -20 -60, -25 -45, -5 -40 C -25 -35, -30 -15, -8 -10 C -28 -5, -32 15, -10 20 C -25 25, -28 45, -8 50 C -20 58, -20 78, 2 82 C -10 90, -10 105, 12 110" fill="url(#greenLeaf)" stroke="#166534" stroke-width="1.5" />
-      <path d="M 5 -70 C 15 -75, 20 -60, 5 -55 C 20 -50, 25 -35, 5 -30 C 25 -25, 30 -5, 8 0 C 28 5, 32 25, 10 30 C 25 35, 28 55, 8 60 C 20 68, 20 88, -2 92" fill="url(#greenLeaf)" stroke="#166534" stroke-width="1.5" />
-    </g>
+  <!-- 4. LAUREL WREATH (GOLDEN WHEAT TIPS & GREEN LEAVES) -->
+  <!-- Left Side Garland -->
+  <g id='leftGarland'>
+    <!-- Top Golden Wheat/Grain Ears -->
+    <path d='M192,172 C178,198 168,230 162,265 C146,242 152,210 178,185 Z' fill='url(#goldWheatGrad)' stroke='#b45309' stroke-width='1.5'/>
+    <path d='M168,212 C154,238 148,272 144,305 C130,280 134,248 156,224 Z' fill='url(#goldWheatGrad)' stroke='#b45309' stroke-width='1.5'/>
+    <path d='M146,258 C134,286 130,318 128,348 C116,322 120,290 136,268 Z' fill='url(#goldWheatGrad)' stroke='#b45309' stroke-width='1.5'/>
+
+    <!-- Lower Green Leaves -->
+    <path d='M132,305 C122,340 122,375 125,408 C108,380 108,342 122,315 Z' fill='url(#greenLeafGrad)' stroke='#15803d' stroke-width='1.5'/>
+    <path d='M126,355 C122,392 128,426 138,458 C118,432 114,395 122,365 Z' fill='url(#greenLeafGrad)' stroke='#15803d' stroke-width='1.5'/>
+    <path d='M136,410 C144,445 160,476 182,502 C155,482 142,450 136,418 Z' fill='url(#greenLeafGrad)' stroke='#15803d' stroke-width='1.5'/>
+    <path d='M168,462 C184,490 210,514 240,528 C210,515 188,492 172,468 Z' fill='url(#greenLeafGrad)' stroke='#15803d' stroke-width='1.5'/>
+    <path d='M215,498 C238,518 268,528 295,532 C268,526 242,514 220,502 Z' fill='url(#greenLeafGrad)' stroke='#15803d' stroke-width='1.5'/>
+
+    <!-- Inner Leaf Sprigs (Left) -->
+    <path d='M176,275 C162,298 160,326 162,352 C150,332 152,305 168,285 Z' fill='url(#greenLeafGrad)' stroke='#15803d' stroke-width='1'/>
+    <path d='M164,335 C156,365 158,396 166,424 C150,402 148,370 156,345 Z' fill='url(#greenLeafGrad)' stroke='#15803d' stroke-width='1'/>
+    <path d='M168,398 C174,428 190,455 212,476 C190,458 178,432 170,405 Z' fill='url(#greenLeafGrad)' stroke='#15803d' stroke-width='1'/>
   </g>
 
-  <!-- Central Bold RAW & INDIA -->
-  <text x="250" y="325" font-family="'Times New Roman', serif" font-weight="bold" font-size="52" fill="#1e3a8a" text-anchor="middle" letter-spacing="10">
-    RAW
-  </text>
-  <text x="250" y="358" font-family="'Inter', sans-serif" font-weight="900" font-size="20" fill="#1e3a8a" text-anchor="middle" letter-spacing="8">
-    INDIA
-  </text>
+  <!-- Right Side Garland (Symmetric Mirror) -->
+  <g id='rightGarland' transform='translate(600, 0) scale(-1, 1)'>
+    <!-- Top Golden Wheat/Grain Ears -->
+    <path d='M192,172 C178,198 168,230 162,265 C146,242 152,210 178,185 Z' fill='url(#goldWheatGrad)' stroke='#b45309' stroke-width='1.5'/>
+    <path d='M168,212 C154,238 148,272 144,305 C130,280 134,248 156,224 Z' fill='url(#goldWheatGrad)' stroke='#b45309' stroke-width='1.5'/>
+    <path d='M146,258 C134,286 130,318 128,348 C116,322 120,290 136,268 Z' fill='url(#goldWheatGrad)' stroke='#b45309' stroke-width='1.5'/>
 
-  <!-- Red Decorative Ceremonial Ribbon Banner at Base -->
-  <g id="ceremonialRibbon">
-    <!-- Ribbon Shadow/Folds -->
-    <path d="M 100 455 L 75 425 L 125 425 L 120 455 Z" fill="#7f1d1d" />
-    <path d="M 400 455 L 425 425 L 375 425 L 380 455 Z" fill="#7f1d1d" />
-    <polygon points="75,425 50,445 75,465 110,455" fill="#b91c1c" stroke="#ca8a04" stroke-width="1.5" />
-    <polygon points="425,425 450,445 425,465 390,455" fill="#b91c1c" stroke="#ca8a04" stroke-width="1.5" />
+    <!-- Lower Green Leaves -->
+    <path d='M132,305 C122,340 122,375 125,408 C108,380 108,342 122,315 Z' fill='url(#greenLeafGrad)' stroke='#15803d' stroke-width='1.5'/>
+    <path d='M126,355 C122,392 128,426 138,458 C118,432 114,395 122,365 Z' fill='url(#greenLeafGrad)' stroke='#15803d' stroke-width='1.5'/>
+    <path d='M136,410 C144,445 160,476 182,502 C155,482 142,450 136,418 Z' fill='url(#greenLeafGrad)' stroke='#15803d' stroke-width='1.5'/>
+    <path d='M168,462 C184,490 210,514 240,528 C210,515 188,492 172,468 Z' fill='url(#greenLeafGrad)' stroke='#15803d' stroke-width='1.5'/>
+    <path d='M215,498 C238,518 268,528 295,532 C268,526 242,514 220,502 Z' fill='url(#greenLeafGrad)' stroke='#15803d' stroke-width='1.5'/>
 
-    <!-- Main Front Ribbon Curve -->
-    <path d="M 100 440 Q 250 480 400 440 L 405 470 Q 250 510 95 470 Z" fill="url(#redRibbonGrad)" stroke="#facc15" stroke-width="3" />
-    <path d="M 102 444 Q 250 484 398 444" stroke="#fef08a" stroke-width="1" fill="none" opacity="0.8" />
-    <path d="M 98 466 Q 250 506 402 466" stroke="#fef08a" stroke-width="1" fill="none" opacity="0.8" />
+    <!-- Inner Leaf Sprigs (Right) -->
+    <path d='M176,275 C162,298 160,326 162,352 C150,332 152,305 168,285 Z' fill='url(#greenLeafGrad)' stroke='#15803d' stroke-width='1'/>
+    <path d='M164,335 C156,365 158,396 166,424 C150,402 148,370 156,345 Z' fill='url(#greenLeafGrad)' stroke='#15803d' stroke-width='1'/>
+    <path d='M168,398 C174,428 190,455 212,476 C190,458 178,432 170,405 Z' fill='url(#greenLeafGrad)' stroke='#15803d' stroke-width='1'/>
+  </g>
 
-    <!-- Satyameva Jayate (सत्यमेव जयते) in White -->
-    <text font-family="'Poppins', 'Noto Sans Devanagari', sans-serif" font-weight="700" font-size="25" fill="#ffffff" text-anchor="middle">
-      <textPath href="#curveRibbon" startOffset="50%" text-anchor="middle">
-        सत्यमेव जयते
-      </textPath>
+  <!-- 5. CENTER TEXT: R A W (Bold Blue Serif) -->
+  <g transform='translate(300, 435)'>
+    <text font-family='Times New Roman, Georgia, serif' font-weight='900' font-size='96' fill='#1d4ed8' text-anchor='middle' letter-spacing='14'>
+      RAW
+    </text>
+  </g>
+
+  <!-- 6. BELOW RAW: INDIA WITH ACCENT -->
+  <g transform='translate(300, 478)'>
+    <text font-family='Arial Black, Arial, sans-serif' font-weight='900' font-size='22' fill='#1e40af' text-anchor='middle' letter-spacing='4'>
+      INDIA
+    </text>
+    <!-- Green Accent Arch underneath INDIA -->
+    <path d='M-38,6 Q0,16 38,6' stroke='#16a34a' stroke-width='4' fill='none' stroke-linecap='round'/>
+  </g>
+
+  <!-- 7. BOTTOM RED BANNER RIBBON WITH GOLD BORDERS -->
+  <g transform='translate(300, 528)'>
+    <!-- Left Ribbon Fold End -->
+    <path d='M-180,-14 L-150,-14 L-150,22 L-180,22 L-168,4 Z' fill='#991b1b' stroke='#d97706' stroke-width='1.5'/>
+    <!-- Right Ribbon Fold End -->
+    <path d='M180,-14 L150,-14 L150,22 L180,22 L168,4 Z' fill='#991b1b' stroke='#d97706' stroke-width='1.5'/>
+
+    <!-- Main Front Curved Ribbon -->
+    <path d='M-154,-16 C-70,-8 70,-8 154,-16 L154,20 C70,28 -70,28 -154,20 Z' fill='url(#redRibbonGrad)' stroke='#f59e0b' stroke-width='2.5'/>
+    
+    <!-- Top & Bottom Gold Filigree Borders on Ribbon -->
+    <path d='M-152,-14 C-70,-6 70,-6 152,-14' stroke='#fef08a' stroke-width='1.2' fill='none'/>
+    <path d='M-152,18 C-70,26 70,26 152,18' stroke='#fef08a' stroke-width='1.2' fill='none'/>
+
+    <!-- Motto Text: सत्यमेव जयते (Pristine White Devanagari) -->
+    <text y='10' font-family='Arial, sans-serif' font-weight='900' font-size='26' fill='#ffffff' text-anchor='middle' letter-spacing='1.5'>
+      सत्यमेव जयते
     </text>
   </g>
 </svg>

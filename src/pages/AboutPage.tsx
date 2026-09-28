@@ -33,7 +33,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onNavigate }) => {
           <div className="lg:col-span-8 space-y-6 text-slate-700 leading-relaxed text-sm sm:text-base">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-50 border border-red-200 text-red-600 text-xs font-bold uppercase tracking-wider">
               <span className="material-symbols-outlined text-[16px]">verified</span>
-              Autonomous Citizen Vigilance & Fact-Finding Collective
+              Jai Hind Citizen Vigilance & Fact-Finding Collective
             </div>
 
             <h2 className="font-headline font-bold text-2xl sm:text-3xl text-slate-900 leading-snug">
@@ -104,7 +104,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onNavigate }) => {
             <div className="space-y-3 text-xs">
               <div className="flex justify-between py-1 border-b border-slate-100">
                 <span className="text-slate-500">Legal Classification:</span>
-                <span className="font-bold text-slate-900">Autonomous NPO Trust</span>
+                <span className="font-bold text-slate-900">Registered NPO Trust</span>
               </div>
               <div className="flex justify-between py-1 border-b border-slate-100">
                 <span className="text-slate-500">Trust Deed Number:</span>

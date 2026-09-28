@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BLACKLISTED_OFFICERS } from '../data/siteData';
+import { toStandardDisplayDate } from '../utils/dateUtils';
 
 interface BlacklistedOfficersPageProps {
   onNavigate: (page: string) => void;
@@ -10,6 +11,21 @@ export const BlacklistedOfficersPage: React.FC<BlacklistedOfficersPageProps> = (
   onNavigate,
   onOpenVerifyModal
 }) => {
+  const [records, setRecords] = useState<any[]>(BLACKLISTED_OFFICERS);
+
+  useEffect(() => {
+    fetch('/api/blacklist')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+          setRecords(data.data);
+        }
+      })
+      .catch(() => {
+        // fallback to default siteData
+      });
+  }, []);
+
   return (
     <div className="space-y-12 pb-16">
       {/* Header Banner */}
@@ -59,7 +75,7 @@ export const BlacklistedOfficersPage: React.FC<BlacklistedOfficersPageProps> = (
               Revoked Identification Registry
             </span>
             <span className="text-xs font-mono text-red-400 font-bold">
-              UPDATED: 2026 ACTIVE
+              UPDATED: 2026 ACTIVE ({records.length} REVOKED)
             </span>
           </div>
 
@@ -67,7 +83,7 @@ export const BlacklistedOfficersPage: React.FC<BlacklistedOfficersPageProps> = (
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-slate-100 text-slate-700 font-bold uppercase border-b border-slate-200">
-                  <th className="p-3.5">Revoked Badge ID</th>
+                  <th className="p-3.5">Revoke UID ID</th>
                   <th className="p-3.5">Individual Name</th>
                   <th className="p-3.5">Jurisdiction</th>
                   <th className="p-3.5">Revocation Date</th>
@@ -76,10 +92,10 @@ export const BlacklistedOfficersPage: React.FC<BlacklistedOfficersPageProps> = (
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-sans">
-                {BLACKLISTED_OFFICERS.map((officer) => (
-                  <tr key={officer.id} className="hover:bg-red-50/40 transition-colors">
+                {records.map((officer) => (
+                  <tr key={officer.id || officer.badgeNumber} className="hover:bg-red-50/40 transition-colors">
                     <td className="p-3.5 font-mono font-bold text-red-600">
-                      {officer.badgeNumber}
+                      {officer.uidNumber || officer.badgeNumber}
                     </td>
                     <td className="p-3.5 font-bold text-slate-900">
                       {officer.name}
@@ -88,7 +104,7 @@ export const BlacklistedOfficersPage: React.FC<BlacklistedOfficersPageProps> = (
                       {officer.jurisdiction}
                     </td>
                     <td className="p-3.5 font-mono text-slate-600">
-                      {officer.revocationDate}
+                      {toStandardDisplayDate(officer.revocationDate)}
                     </td>
                     <td className="p-3.5 text-slate-600 max-w-xs leading-normal">
                       {officer.reason}

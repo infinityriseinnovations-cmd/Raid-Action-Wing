@@ -12,7 +12,7 @@ export const StatutoryDisclaimer: React.FC = () => {
           </div>
           <p className="text-xs text-slate-600 leading-relaxed">
             <strong className="text-slate-900">Raid Action Wing Foundation (RAW Foundation)</strong> is registered under{' '}
-            <strong>IFA Number 760</strong> as an autonomous Non-Profit Organization operating as a Criminal Information & Citizen Vigilance Provider agency under the Indian Trusts Act 1882. We are not an official executive police agency or judicial court. We maintain no constitutional tie-up or executive subordination with Central/State Governments, CBI, State Police, or MHA. Our primary mandate is independent fact-finding, legal advisory, human rights education, and transmitting actionable public interest crime information to authorized statutory law enforcement authorities for formal prosecution.
+            <strong>IFA Number 760</strong> as a Non-Profit Organization operating as a Criminal Information & Citizen Vigilance Provider agency under the Indian Trusts Act 1882. We are not an official executive police agency or judicial court. We maintain no constitutional tie-up or executive subordination with Central/State Governments, CBI, State Police, or MHA. Our primary mandate is independent fact-finding, legal advisory, human rights education, and transmitting actionable public interest crime information to authorized statutory law enforcement authorities for formal prosecution.
           </p>
         </div>
 

@@ -237,7 +237,7 @@ export const OfficersDirectory: React.FC<OfficersDirectoryProps> = ({ onVerifyOf
                     alt={officer.name}
                     className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-300"
                     onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).src = '/rawf-logo.svg';
+                      (e.currentTarget as HTMLImageElement).src = '/rawf-logo.jpg';
                     }}
                   />
                   <div

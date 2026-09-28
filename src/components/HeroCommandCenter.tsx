@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { RawfLogo } from './RawfLogo';
+import { DirectorBroadcastVideo } from './DirectorBroadcastVideo';
 
 interface HeroCommandCenterProps {
   onOpenVerifyModal: (prefillId?: string) => void;
@@ -8,10 +9,6 @@ interface HeroCommandCenterProps {
 
 export const HeroCommandCenter: React.FC<HeroCommandCenterProps> = ({ onOpenVerifyModal, lang }) => {
   const [quickOfficerId, setQuickOfficerId] = useState('');
-  const [quickVerifyResult, setQuickVerifyResult] = useState<{ status: 'idle' | 'loading' | 'success' | 'error'; message: string }>({
-    status: 'idle',
-    message: ''
-  });
 
   const [dossierCode, setDossierCode] = useState('');
   const [dossierResult, setDossierResult] = useState<{
@@ -20,50 +17,8 @@ export const HeroCommandCenter: React.FC<HeroCommandCenterProps> = ({ onOpenVeri
     message?: string;
   }>({ status: 'idle' });
 
-  const handleQuickVerify = async () => {
-    if (!quickOfficerId.trim()) {
-      setQuickVerifyResult({
-        status: 'error',
-        message: 'Please enter an Officer Identification Code.'
-      });
-      return;
-    }
-
-    setQuickVerifyResult({ status: 'loading', message: 'Checking active roster database...' });
-
-    try {
-      const res = await fetch('/api/officers/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: quickOfficerId })
-      });
-      const data = await res.json();
-
-      if (data.verified) {
-        setQuickVerifyResult({
-          status: 'success',
-          message: `✓ VERIFIED OFFICIAL: ${data.officer.name} (${data.officer.designation}) - Valid till ${data.officer.validTill}`
-        });
-      } else {
-        setQuickVerifyResult({
-          status: 'error',
-          message: '⚠ ALERT: Badge not verified in active national roster. Dial 1800-RAW-CELL.'
-        });
-      }
-    } catch {
-      // Fallback
-      if (quickOfficerId.toUpperCase().includes('RW-') || quickOfficerId.toUpperCase().includes('DG-')) {
-        setQuickVerifyResult({
-          status: 'success',
-          message: '✓ VERIFIED OFFICIAL: Badge confirmed active in National Directory.'
-        });
-      } else {
-        setQuickVerifyResult({
-          status: 'error',
-          message: '⚠ ALERT: Credential not found. Check Blacklisted Registry.'
-        });
-      }
-    }
+  const handleQuickVerify = () => {
+    onOpenVerifyModal(quickOfficerId.trim() || undefined);
   };
 
   const handleTrackDossier = async () => {
@@ -108,7 +63,7 @@ export const HeroCommandCenter: React.FC<HeroCommandCenterProps> = ({ onOpenVeri
     <section className="relative w-full bg-gradient-to-b from-white via-slate-50 to-slate-100 border-b border-slate-200 py-10 lg:py-16 overflow-hidden">
       {/* Watermark Crest in Backdrop */}
       <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/4 opacity-[0.03] pointer-events-none w-[500px] h-[500px]">
-        <img src="/rawf-logo.svg" alt="Watermark" className="w-full h-full object-contain" />
+        <img src="/rawf-logo.jpg" alt="Watermark" className="w-full h-full object-contain" />
       </div>
 
       <div className="max-w-7xl mx-auto px-4 lg:px-8 relative z-10">
@@ -117,16 +72,18 @@ export const HeroCommandCenter: React.FC<HeroCommandCenterProps> = ({ onOpenVeri
           <div className="lg:col-span-7 space-y-6">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-50 border border-red-200 text-red-600 text-xs font-bold tracking-wide uppercase">
               <span className="material-symbols-outlined text-[16px]">gavel</span>
-              <span>Autonomous Citizen Vigilance & Anti-Corruption Network</span>
+              <span>Jai Hind Citizen Vigilance & Anti-Corruption Network</span>
             </div>
 
             <div className="space-y-3">
-              <h1 className="font-headline font-extrabold text-3xl sm:text-4xl lg:text-5xl text-slate-900 tracking-tight leading-[1.15] uppercase">
-                Combating Crime & <br className="hidden sm:block" />
-                Curtailing Corruption <br />
-                <span className="text-red-600 border-b-4 border-[#0d47a1] pb-1">Across India</span>
+              <h1 className="font-headline font-extrabold text-3xl sm:text-4xl lg:text-5xl text-slate-900 tracking-tight leading-[1.2] uppercase">
+                <span className="block sm:inline lg:block">Combating Crime &amp;</span>{' '}
+                <span className="block sm:inline lg:block">Curtailing Corruption</span>{' '}
+                <span className="block">
+                  <span className="text-red-600 border-b-4 border-[#0d47a1] pb-1 inline-block mt-1">Across India</span>
+                </span>
               </h1>
-              <p className="text-slate-600 text-base sm:text-lg leading-relaxed pt-2 max-w-2xl">
+              <p className="text-slate-600 text-base sm:text-lg leading-relaxed pt-2 max-w-2xl text-justify [text-align-last:left]">
                 <strong className="text-slate-900 font-semibold">Raid Action Wing Foundation (RAWF)</strong> is India's premier citizen vigilance, social investigation, and constitutional oversight collective. We compile judicial-grade evidence, protect whistleblowers, and collaborate with constitutional law enforcement bodies to ensure an accountable, crime-free nation.
               </p>
             </div>
@@ -188,24 +145,20 @@ export const HeroCommandCenter: React.FC<HeroCommandCenterProps> = ({ onOpenVeri
                     />
                     <button
                       onClick={handleQuickVerify}
-                      className="absolute right-1 px-2.5 py-1 bg-[#0d47a1] hover:bg-blue-900 text-white rounded text-[11px] font-bold uppercase transition-all cursor-pointer"
+                      className="absolute right-1 px-2.5 py-1 bg-[#0d47a1] hover:bg-blue-900 text-white rounded text-[11px] font-bold uppercase transition-all cursor-pointer shadow-xs"
+                      title="Verify Officer in National Registry"
                     >
                       Check
                     </button>
                   </div>
-                  {quickVerifyResult.message && (
-                    <div
-                      className={`text-[11px] font-mono leading-tight ${
-                        quickVerifyResult.status === 'success'
-                          ? 'text-emerald-700 font-bold'
-                          : quickVerifyResult.status === 'error'
-                          ? 'text-red-600 font-semibold'
-                          : 'text-slate-500'
-                      }`}
-                    >
-                      {quickVerifyResult.message}
-                    </div>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => onOpenVerifyModal(quickOfficerId.trim() || undefined)}
+                    className="text-[10px] text-slate-500 hover:text-[#0d47a1] font-mono flex items-center gap-1 transition-colors cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[13px] text-[#0d47a1]">verified_user</span>
+                    <span>Click Check to open verified roster credentials popup</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -251,25 +204,8 @@ export const HeroCommandCenter: React.FC<HeroCommandCenterProps> = ({ onOpenVeri
               </div>
             </div>
 
-            {/* Visual Action Banner with Emblem Badge */}
-            <div className="relative rounded-lg overflow-hidden border border-slate-200 shadow-2xs group bg-slate-900">
-              <img
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuA7D1Cv8Zz5hHkHWRsC2dBpAnYUkZ0ZCtxYoBPJYBBLwhi71gukNqmUaq1S7ds7-rpnQy9dgKR1hFGJCvg6fdzR0QNDcs1uncde15aH1Cj_ovJ49wdbEnyi3HcgYt1DebTQ0dmp7nUxPXX0IuIC0B3gzWoAkWgk8l0YIc9eLsbfB7lOIuzdvNL7lz5_EFlnw_PjTKNYWFcNsU5OnVumga3256O6DHiOZwcVeUFcPhTvMLAcYBENLi3UaA"
-                alt="Vigilance officers and citizens participating in an anti-crime and anti-narcotics campaign rally in India with banners."
-                className="w-full h-48 sm:h-52 object-cover object-top opacity-95 group-hover:scale-102 transition-transform duration-300"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-3.5 text-white">
-                <div className="flex items-center gap-2 mb-1">
-                  <RawfLogo className="w-7 h-7 bg-white/95" />
-                  <span className="text-xs font-bold font-headline uppercase tracking-wider">
-                    Ground Action & Citizen Rallies
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-200 line-clamp-1">
-                  National Anti-Narcotics & Vigilance Operation Command
-                </p>
-              </div>
-            </div>
+            {/* Official National Director Video Broadcast */}
+            <DirectorBroadcastVideo onApplyClick={() => onOpenVerifyModal()} />
 
             {/* Dossier Tracker Bar */}
             <div className="pt-1">
