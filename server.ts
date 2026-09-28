@@ -801,7 +801,7 @@ async function startServer() {
     }
   });
 
-  // API 1F2: Download Production SQL Schema
+  // API 1F2: Download Production SQL Schema & Deployment Package
   app.get(['/api/download/sql', '/api/download-schema'], (_req, res) => {
     const sqlPath = path.join(process.cwd(), 'public', 'rawf_production_schema.sql');
     if (fs.existsSync(sqlPath)) {
@@ -810,6 +810,16 @@ async function startServer() {
       return res.sendFile(sqlPath);
     }
     return res.status(404).json({ success: false, message: 'SQL schema file not found.' });
+  });
+
+  app.get(['/api/download/deploy-zip', '/api/download-package'], (_req, res) => {
+    const zipPath = path.join(process.cwd(), 'public', 'rawf_deploy_package.zip');
+    if (fs.existsSync(zipPath)) {
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', 'attachment; filename="rawf_deploy_package.zip"');
+      return res.sendFile(zipPath);
+    }
+    return res.status(404).json({ success: false, message: 'Deployment ZIP package not found.' });
   });
 
   // API 1G: Upload / Replace Indian Law PDF Document (Admin)

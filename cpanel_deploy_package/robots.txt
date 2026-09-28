@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /#admin
+Disallow: /#admin-portal
+Disallow: /officers-photos/
+
+# Prevent Search Engines (Google, Bing, etc.) from indexing officer photos
+User-agent: Googlebot-Image
+Disallow: /*/officers/*
+Disallow: /*photo*
+
+User-agent: *
+Disallow: /*?*photo*
