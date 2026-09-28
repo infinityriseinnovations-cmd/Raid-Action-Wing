@@ -5,11 +5,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
+import { TopHeroBanner } from './components/TopHeroBanner';
 import { HeroCommandCenter } from './components/HeroCommandCenter';
 import { PortalHub } from './components/PortalHub';
 import { PriorityChannels } from './components/PriorityChannels';
 import { InstitutionalMandate } from './components/InstitutionalMandate';
 import { ServicesSection } from './components/ServicesSection';
+import { StatutoryMandateOverview } from './components/StatutoryMandateOverview';
 import { InitiativesSection } from './components/InitiativesSection';
 import { EventsSection } from './components/EventsSection';
 import { OfficersDirectory } from './components/OfficersDirectory';
@@ -35,6 +37,7 @@ import { ActivitiesPage } from './pages/ActivitiesPage';
 import { ContactPage } from './pages/ContactPage';
 import { ApplyOnlinePage } from './pages/ApplyOnlinePage';
 import { AdminPage } from './pages/AdminPage';
+import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<string>('home');
@@ -59,45 +62,13 @@ export default function App() {
       else if (hash === 'activities-page') setCurrentPage('activities');
       else if (hash === 'apply-online-page') setCurrentPage('apply-online');
       else if (hash === 'contact-page') setCurrentPage('contact');
+      else if (hash === 'privacy' || hash === 'privacy-policy' || hash === 'privacy-policy-page') setCurrentPage('privacy');
       else if (hash === 'admin' || hash === 'admin-portal') setCurrentPage('admin');
-      else if (hash.startsWith('verify/') || hash.startsWith('verify-')) {
-        const code = decodeURIComponent(hash.replace(/^verify[\/-]/, ''));
-        if (code) {
-          setVerifyPrefillCode(code);
-          setVerifyModalOpen(true);
-        }
-      }
-    };
-
-    // Check query params for instant QR code verification scan (e.g. ?verify=RAWF/2026/1995)
-    try {
-      const searchParams = new URLSearchParams(window.location.search);
-      const verifyCode = searchParams.get('verify') || searchParams.get('uid') || searchParams.get('badge');
-      if (verifyCode) {
-        setVerifyPrefillCode(decodeURIComponent(verifyCode));
-        setVerifyModalOpen(true);
-      }
-    } catch {
-      // Fallback
-    }
-
-    // Custom event listener for components to trigger verification modal
-    const handleVerifyEvent = (e: Event) => {
-      const detail = (e as CustomEvent<{ code?: string }>).detail;
-      if (detail?.code) {
-        setVerifyPrefillCode(detail.code);
-        setVerifyModalOpen(true);
-      }
     };
 
     window.addEventListener('hashchange', handleHash);
-    window.addEventListener('rawf:verify-officer', handleVerifyEvent as EventListener);
     handleHash();
-
-    return () => {
-      window.removeEventListener('hashchange', handleHash);
-      window.removeEventListener('rawf:verify-officer', handleVerifyEvent as EventListener);
-    };
+    return () => window.removeEventListener('hashchange', handleHash);
   }, []);
 
   const handleNavigate = (page: string, subParam?: string) => {
@@ -139,6 +110,9 @@ export default function App() {
       <main className="w-full pt-[100px] sm:pt-[116px]">
         {currentPage === 'home' && (
           <>
+            {/* Top Official Dual-Color Insignia Banner */}
+            <TopHeroBanner />
+
             {/* Hero Command Center */}
             <HeroCommandCenter
               onOpenVerifyModal={handleOpenVerifyModal}
@@ -157,6 +131,9 @@ export default function App() {
             {/* Core Services Wings */}
             <ServicesSection onSelectServiceForReport={handleSelectServiceForReport} />
 
+            {/* Apex Integrity Mandate & Foundational Governance */}
+            <StatutoryMandateOverview onNavigate={handleNavigate} />
+
             {/* National Initiatives & Deployments */}
             <InitiativesSection />
 
@@ -173,7 +150,7 @@ export default function App() {
             <MembershipApplySection />
 
             {/* ID Card Download Portal */}
-            <IdCardDownloadPortal onOpenVerifyModal={handleOpenVerifyModal} />
+            <IdCardDownloadPortal />
 
             {/* Confidential Incident / Grievance Filing Terminal */}
             <ReportGrievanceSection prefillWingTitle={prefillWing} />
@@ -244,7 +221,7 @@ export default function App() {
 
         {currentPage === 'id-download' && (
           <div className="py-8">
-            <IdCardDownloadPortal onOpenVerifyModal={handleOpenVerifyModal} />
+            <IdCardDownloadPortal />
           </div>
         )}
 
@@ -256,6 +233,10 @@ export default function App() {
 
         {currentPage === 'contact' && (
           <ContactPage onNavigate={handleNavigate} />
+        )}
+
+        {(currentPage === 'privacy' || currentPage === 'privacy-policy') && (
+          <PrivacyPolicyPage onNavigate={handleNavigate} />
         )}
 
         {currentPage === 'admin' && (

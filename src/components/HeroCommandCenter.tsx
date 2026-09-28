@@ -140,13 +140,15 @@ export const HeroCommandCenter: React.FC<HeroCommandCenterProps> = ({ onOpenVeri
                       value={quickOfficerId}
                       onChange={(e) => setQuickOfficerId(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleQuickVerify()}
-                      placeholder="Enter ID (e.g. RW-MH-102)"
+                      placeholder="Enter ID (E.G. RAWF/2026/xxxx)"
+                      aria-label="Officer badge or UID number to verify"
                       className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-xs font-mono text-slate-900 uppercase focus:bg-white focus:outline-none focus:border-[#0d47a1] placeholder:text-slate-400 pr-16"
                     />
                     <button
                       onClick={handleQuickVerify}
                       className="absolute right-1 px-2.5 py-1 bg-[#0d47a1] hover:bg-blue-900 text-white rounded text-[11px] font-bold uppercase transition-all cursor-pointer shadow-xs"
                       title="Verify Officer in National Registry"
+                      aria-label="Check Officer in National Registry"
                     >
                       Check
                     </button>
@@ -154,6 +156,7 @@ export const HeroCommandCenter: React.FC<HeroCommandCenterProps> = ({ onOpenVeri
                   <button
                     type="button"
                     onClick={() => onOpenVerifyModal(quickOfficerId.trim() || undefined)}
+                    aria-label="Open verified roster credentials popup"
                     className="text-[10px] text-slate-500 hover:text-[#0d47a1] font-mono flex items-center gap-1 transition-colors cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-[13px] text-[#0d47a1]">verified_user</span>

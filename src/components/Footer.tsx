@@ -49,22 +49,22 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               Core Navigation
             </span>
             <div className="flex flex-col space-y-2 text-xs text-slate-300">
-              <button onClick={() => handleNav('about')} className="hover:text-white transition-colors text-left cursor-pointer">
+              <button onClick={() => handleNav('about')} aria-label="About RAWF Mandate" className="hover:text-white transition-colors text-left cursor-pointer">
                 About RAWF Mandate
               </button>
-              <button onClick={() => handleNav('services')} className="hover:text-white transition-colors text-left cursor-pointer">
+              <button onClick={() => handleNav('services')} aria-label="Our Services & Wings" className="hover:text-white transition-colors text-left cursor-pointer">
                 Our Services & Wings
               </button>
-              <button onClick={() => handleNav('projects')} className="hover:text-white transition-colors text-left cursor-pointer">
+              <button onClick={() => handleNav('projects')} aria-label="Our 20 National Projects" className="hover:text-white transition-colors text-left cursor-pointer">
                 Our 20 National Projects
               </button>
-              <button onClick={() => handleNav('departments')} className="hover:text-white transition-colors text-left cursor-pointer">
+              <button onClick={() => handleNav('departments')} aria-label="22 Specialized Departments" className="hover:text-white transition-colors text-left cursor-pointer">
                 22 Specialized Departments
               </button>
-              <button onClick={() => handleNav('apply-online')} className="hover:text-white transition-colors text-left cursor-pointer">
+              <button onClick={() => handleNav('apply-online')} aria-label="Member Apply & Volunteer Intake" className="hover:text-white transition-colors text-left cursor-pointer">
                 Member Apply / Volunteers
               </button>
-              <button onClick={() => handleNav('id-download')} className="hover:text-white transition-colors text-left cursor-pointer">
+              <button onClick={() => handleNav('id-download')} aria-label="ID Card Download Portal" className="hover:text-white transition-colors text-left cursor-pointer">
                 ID Card Download Portal
               </button>
             </div>
@@ -76,22 +76,22 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               Legal & Rights Hub
             </span>
             <div className="flex flex-col space-y-2 text-xs text-slate-300">
-              <button onClick={() => handleNav('rights')} className="hover:text-white transition-colors text-left cursor-pointer">
+              <button onClick={() => handleNav('rights')} aria-label="13 Citizen Rights Charters" className="hover:text-white transition-colors text-left cursor-pointer">
                 13 Citizen Rights Charters
               </button>
-              <button onClick={() => handleNav('indian-laws')} className="hover:text-white transition-colors text-left cursor-pointer">
+              <button onClick={() => handleNav('indian-laws')} aria-label="Indian Laws and Police Rulings" className="hover:text-white transition-colors text-left cursor-pointer">
                 Indian Laws & Police Rulings
               </button>
-              <button onClick={() => handleNav('officers')} className="hover:text-white transition-colors text-left cursor-pointer">
+              <button onClick={() => handleNav('officers')} aria-label="Verified Officers Directory" className="hover:text-white transition-colors text-left cursor-pointer">
                 Verified Officers Directory
               </button>
-              <button onClick={() => handleNav('blacklisted-officers')} className="hover:text-white transition-colors text-left cursor-pointer text-red-300">
+              <button onClick={() => handleNav('blacklisted-officers')} aria-label="Blacklisted Officers Register" className="hover:text-white transition-colors text-left cursor-pointer text-red-300">
                 Blacklisted Officers Register
               </button>
-              <button onClick={() => handleNav('grievance-cell')} className="hover:text-white transition-colors text-left cursor-pointer">
+              <button onClick={() => handleNav('grievance-cell')} aria-label="Public Grievance Cell" className="hover:text-white transition-colors text-left cursor-pointer">
                 Public Grievance Cell
               </button>
-              <button onClick={() => handleNav('activities')} className="hover:text-white transition-colors text-left cursor-pointer">
+              <button onClick={() => handleNav('activities')} aria-label="Our Ground Activities" className="hover:text-white transition-colors text-left cursor-pointer">
                 Our Ground Activities
               </button>
             </div>
@@ -133,13 +133,25 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
         <div className="mt-6 pt-4 border-t border-slate-800/60 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400">
           <span>© 2026 Raid Action Wing Foundation (RAWF). All rights reserved.</span>
           <div className="flex items-center space-x-4">
-            <button onClick={() => handleNav('privacy')} className="hover:text-white transition-colors cursor-pointer">
+            <button
+              onClick={() => handleNav('privacy')}
+              aria-label="Read RAWF Privacy Policy & Whistleblower Protection Charter"
+              className="hover:text-white transition-colors cursor-pointer"
+            >
               Privacy Policy
             </button>
-            <button onClick={() => handleNav('contact')} className="hover:text-white transition-colors cursor-pointer">
+            <button
+              onClick={() => handleNav('contact')}
+              aria-label="Navigate to National Contact Desk"
+              className="hover:text-white transition-colors cursor-pointer"
+            >
               Contact Desk
             </button>
-            <button onClick={() => handleNav('admin')} className="text-amber-400 hover:text-amber-300 transition-colors cursor-pointer font-bold flex items-center gap-1">
+            <button
+              onClick={() => handleNav('admin')}
+              aria-label="Director General Admin Command Console"
+              className="text-amber-400 hover:text-amber-300 transition-colors cursor-pointer font-bold flex items-center gap-1"
+            >
               <span className="material-symbols-outlined text-[14px]">admin_panel_settings</span>
               <span>Admin Console</span>
             </button>

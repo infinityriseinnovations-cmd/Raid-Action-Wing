@@ -13,20 +13,33 @@ export const ServicesPage: React.FC<ServicesPageProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState(initialService);
 
+  const handleTriggerReport = (serviceTitle: string) => {
+    if (onSelectServiceForReport) {
+      onSelectServiceForReport(serviceTitle);
+    }
+    onNavigate('home');
+    setTimeout(() => {
+      const el = document.getElementById('report-tip-anchor');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 120);
+  };
+
   return (
     <div className="space-y-12 pb-16">
       {/* Header Banner */}
       <div className="bg-[#0a192f] text-white py-12 px-4 lg:px-8 border-b-4 border-red-600">
         <div className="max-w-7xl mx-auto space-y-3">
           <div className="flex items-center gap-2 text-xs font-mono text-slate-300">
-            <button onClick={() => onNavigate('home')} className="hover:text-white cursor-pointer">
+            <button onClick={() => onNavigate('home')} aria-label="Return to Home" className="hover:text-white cursor-pointer">
               Home
             </button>
             <span>/</span>
             <span className="text-red-400 font-bold">Our Services</span>
           </div>
           <h1 className="font-headline font-extrabold text-3xl sm:text-4xl lg:text-5xl uppercase tracking-tight">
-            Specialized Vigilance & Intelligence Wings
+            Specialized Vigilance &amp; Intelligence Wings
           </h1>
           <p className="text-sm sm:text-base text-slate-300 max-w-3xl">
             We fighting for Crime and Corruption free India — RAID ACTION WING FOUNDATION.
@@ -36,8 +49,12 @@ export const ServicesPage: React.FC<ServicesPageProps> = ({
 
       <div className="max-w-7xl mx-auto px-4 lg:px-8 space-y-8">
         {/* Navigation Tabs */}
-        <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-3">
+        <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-3" role="tablist" aria-label="Services Division Navigation">
           <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'confidential-info'}
+            aria-label="Confidential Information Wing SEC-INT"
             onClick={() => setActiveTab('confidential-info')}
             className={`px-4 py-2.5 rounded-lg text-xs sm:text-sm font-bold uppercase transition-all cursor-pointer ${
               activeTab === 'confidential-info'
@@ -48,6 +65,10 @@ export const ServicesPage: React.FC<ServicesPageProps> = ({
             Confidential Information (SEC-INT)
           </button>
           <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'crime-info'}
+            aria-label="Crime Information Wing CRIM-DET"
             onClick={() => setActiveTab('crime-info')}
             className={`px-4 py-2.5 rounded-lg text-xs sm:text-sm font-bold uppercase transition-all cursor-pointer ${
               activeTab === 'crime-info'
@@ -58,6 +79,10 @@ export const ServicesPage: React.FC<ServicesPageProps> = ({
             Crime Information (CRIM-DET)
           </button>
           <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'social-investigator'}
+            aria-label="Social Investigator Wing SOC-INV"
             onClick={() => setActiveTab('social-investigator')}
             className={`px-4 py-2.5 rounded-lg text-xs sm:text-sm font-bold uppercase transition-all cursor-pointer ${
               activeTab === 'social-investigator'
@@ -68,6 +93,10 @@ export const ServicesPage: React.FC<ServicesPageProps> = ({
             Social Investigator (SOC-INV)
           </button>
           <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'cyber-forensics'}
+            aria-label="Cyber Forensics Wing CYBER-INT"
             onClick={() => setActiveTab('cyber-forensics')}
             className={`px-4 py-2.5 rounded-lg text-xs sm:text-sm font-bold uppercase transition-all cursor-pointer ${
               activeTab === 'cyber-forensics'
@@ -75,7 +104,7 @@ export const ServicesPage: React.FC<ServicesPageProps> = ({
                 : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
             }`}
           >
-            Cyber Crime Forensics (CYBER-INT)
+            Cyber Forensics (CYBER-INT)
           </button>
         </div>
 
@@ -85,11 +114,11 @@ export const ServicesPage: React.FC<ServicesPageProps> = ({
             <div className="lg:col-span-8 space-y-5">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-blue-50 text-[#0d47a1] font-mono text-xs font-bold uppercase">
                 <span className="material-symbols-outlined text-[16px]">lock</span>
-                WING: SEC-INT • CLASSIFIED WHISTLEBLOWER PROTOCOL
+                WING: SEC-INT • CLASSIFIED INTELLIGENCE &amp; SURVEILLANCE
               </div>
 
               <h2 className="font-headline font-bold text-2xl sm:text-3xl text-slate-900">
-                Confidential Information & Covert Surveillance
+                Confidential Information &amp; Anti-Corruption Surveillance
               </h2>
 
               <p className="text-slate-700 leading-relaxed text-sm sm:text-base">
@@ -98,7 +127,7 @@ export const ServicesPage: React.FC<ServicesPageProps> = ({
 
               <div className="space-y-3 bg-slate-50 border border-slate-200 rounded-xl p-6">
                 <h3 className="font-headline font-bold text-base text-slate-900 uppercase">
-                  Operational Capabilities & Field Methodology
+                  Operational Capabilities &amp; Field Methodology
                 </h3>
                 <div className="space-y-2.5 text-xs sm:text-sm text-slate-600">
                   <div className="flex items-start gap-2.5">
@@ -118,12 +147,10 @@ export const ServicesPage: React.FC<ServicesPageProps> = ({
 
               <div className="pt-2 flex gap-3">
                 <button
-                  onClick={() => {
-                    onSelectServiceForReport('Confidential Information / Administrative Graft');
-                    onNavigate('home');
-                    window.location.hash = '#report-tip-anchor';
-                  }}
-                  className="px-5 py-3 bg-red-600 hover:bg-red-700 text-white font-bold text-xs uppercase rounded transition-colors cursor-pointer"
+                  type="button"
+                  onClick={() => handleTriggerReport('Confidential Information / Administrative Graft')}
+                  aria-label="Submit Classified Tip to SEC-INT Whistleblower Terminal"
+                  className="px-5 py-3 bg-red-600 hover:bg-red-700 text-white font-bold text-xs uppercase rounded transition-colors cursor-pointer shadow-sm"
                 >
                   Submit Classified Tip to SEC-INT
                 </button>
@@ -155,11 +182,11 @@ export const ServicesPage: React.FC<ServicesPageProps> = ({
             <div className="lg:col-span-8 space-y-5">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-red-50 text-red-600 font-mono text-xs font-bold uppercase">
                 <span className="material-symbols-outlined text-[16px]">bar_chart</span>
-                WING: CRIM-DET • ECONOMIC OFFENSES & CRIME INTELLIGENCE
+                WING: CRIM-DET • ECONOMIC OFFENSES &amp; CRIME INTELLIGENCE
               </div>
 
               <h2 className="font-headline font-bold text-2xl sm:text-3xl text-slate-900">
-                Crime Information & Anti-Syndicate Action
+                Crime Information &amp; Anti-Syndicate Action
               </h2>
 
               <p className="text-slate-700 leading-relaxed text-sm sm:text-base">
@@ -172,11 +199,11 @@ export const ServicesPage: React.FC<ServicesPageProps> = ({
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm text-slate-600">
                   <div className="p-3 bg-white border border-slate-200 rounded">
-                    <strong className="text-slate-900 block mb-1">Financial & Banking Fraud</strong>
+                    <strong className="text-slate-900 block mb-1">Financial &amp; Banking Fraud</strong>
                     <span>Predatory digital loan apps, counterfeit currency distribution, and commercial embezzlement.</span>
                   </div>
                   <div className="p-3 bg-white border border-slate-200 rounded">
-                    <strong className="text-slate-900 block mb-1">Contraband & Smuggling</strong>
+                    <strong className="text-slate-900 block mb-1">Contraband &amp; Smuggling</strong>
                     <span>Cross-border narcotics transport, illegal liquor syndicates, and prohibited arms logistics.</span>
                   </div>
                   <div className="p-3 bg-white border border-slate-200 rounded">
@@ -184,7 +211,7 @@ export const ServicesPage: React.FC<ServicesPageProps> = ({
                     <span>Rigged government bidding, substandard infrastructure materials, and commission rackets.</span>
                   </div>
                   <div className="p-3 bg-white border border-slate-200 rounded">
-                    <strong className="text-slate-900 block mb-1">Land Mafia & Grabs</strong>
+                    <strong className="text-slate-900 block mb-1">Land Mafia &amp; Grabs</strong>
                     <span>Forged revenue registry records, coerced tribal land sales, and illegal developer encroachment.</span>
                   </div>
                 </div>
@@ -192,12 +219,10 @@ export const ServicesPage: React.FC<ServicesPageProps> = ({
 
               <div className="pt-2">
                 <button
-                  onClick={() => {
-                    onSelectServiceForReport('Crime Information / Commercial Fraud / Syndicates');
-                    onNavigate('home');
-                    window.location.hash = '#report-tip-anchor';
-                  }}
-                  className="px-5 py-3 bg-red-600 hover:bg-red-700 text-white font-bold text-xs uppercase rounded transition-colors cursor-pointer"
+                  type="button"
+                  onClick={() => handleTriggerReport('Crime Information / Commercial Fraud / Syndicates')}
+                  aria-label="Report Crime Incident to CRIM-DET Desk"
+                  className="px-5 py-3 bg-red-600 hover:bg-red-700 text-white font-bold text-xs uppercase rounded transition-colors cursor-pointer shadow-sm"
                 >
                   Report Crime Incident to CRIM-DET
                 </button>
@@ -226,11 +251,11 @@ export const ServicesPage: React.FC<ServicesPageProps> = ({
             <div className="lg:col-span-8 space-y-5">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-amber-50 text-amber-800 font-mono text-xs font-bold uppercase">
                 <span className="material-symbols-outlined text-[16px]">handshake</span>
-                WING: SOC-INV • HUMAN RIGHTS & CIVIC DEFENSE
+                WING: SOC-INV • HUMAN RIGHTS &amp; CIVIC DEFENSE
               </div>
 
               <h2 className="font-headline font-bold text-2xl sm:text-3xl text-slate-900">
-                Social Investigator & Human Rights Fact-Finding
+                Social Investigator &amp; Human Rights Fact-Finding
               </h2>
 
               <p className="text-slate-700 leading-relaxed text-sm sm:text-base">
@@ -259,12 +284,10 @@ export const ServicesPage: React.FC<ServicesPageProps> = ({
 
               <div className="pt-2">
                 <button
-                  onClick={() => {
-                    onSelectServiceForReport('Social Investigation / Human Rights Violation');
-                    onNavigate('home');
-                    window.location.hash = '#report-tip-anchor';
-                  }}
-                  className="px-5 py-3 bg-red-600 hover:bg-red-700 text-white font-bold text-xs uppercase rounded transition-colors cursor-pointer"
+                  type="button"
+                  onClick={() => handleTriggerReport('Social Investigation / Human Rights Violation')}
+                  aria-label="Request Social Investigator Probe Desk"
+                  className="px-5 py-3 bg-red-600 hover:bg-red-700 text-white font-bold text-xs uppercase rounded transition-colors cursor-pointer shadow-sm"
                 >
                   Request Social Investigator Probe
                 </button>
@@ -290,15 +313,15 @@ export const ServicesPage: React.FC<ServicesPageProps> = ({
             <div className="lg:col-span-8 space-y-5">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-green-50 text-emerald-700 font-mono text-xs font-bold uppercase">
                 <span className="material-symbols-outlined text-[16px]">terminal</span>
-                WING: CYBER-INT • DIGITAL OSINT & FORENSICS
+                WING: CYBER-INT • DIGITAL OSINT &amp; FORENSICS
               </div>
 
               <h2 className="font-headline font-bold text-2xl sm:text-3xl text-slate-900">
-                Cyber Crime Forensics & Telemetry Analysis
+                Cyber Crime Forensics &amp; Telemetry Analysis
               </h2>
 
               <p className="text-slate-700 leading-relaxed text-sm sm:text-base">
-                Digital evidence extraction, online financial scam mitigation, software & IP copyright piracy deterrence, and OSINT digital telemetry analysis.
+                Digital evidence extraction, online financial scam mitigation, software &amp; IP copyright piracy deterrence, and OSINT digital telemetry analysis.
               </p>
 
               <div className="space-y-3 bg-slate-50 border border-slate-200 rounded-xl p-6">
@@ -311,11 +334,11 @@ export const ServicesPage: React.FC<ServicesPageProps> = ({
                     <span>Fake investment platforms, crypto-swindles, WhatsApp trading fraud, and identity theft.</span>
                   </div>
                   <div className="p-3 bg-white border border-slate-200 rounded">
-                    <strong className="text-slate-900 block mb-1">Women & Child Cyber Defense</strong>
+                    <strong className="text-slate-900 block mb-1">Women &amp; Child Cyber Defense</strong>
                     <span>Morphed image sextortion, social media cyberstalking, and anonymous trolling networks.</span>
                   </div>
                   <div className="p-3 bg-white border border-slate-200 rounded">
-                    <strong className="text-slate-900 block mb-1">Anti-Piracy & Counterfeiting</strong>
+                    <strong className="text-slate-900 block mb-1">Anti-Piracy &amp; Counterfeiting</strong>
                     <span>Unauthorized software torrents, educational content piracy, and IP rights infringement.</span>
                   </div>
                   <div className="p-3 bg-white border border-slate-200 rounded">
@@ -327,12 +350,10 @@ export const ServicesPage: React.FC<ServicesPageProps> = ({
 
               <div className="pt-2">
                 <button
-                  onClick={() => {
-                    onSelectServiceForReport('Cyber Crime Forensics / Digital Scam');
-                    onNavigate('home');
-                    window.location.hash = '#report-tip-anchor';
-                  }}
-                  className="px-5 py-3 bg-red-600 hover:bg-red-700 text-white font-bold text-xs uppercase rounded transition-colors cursor-pointer"
+                  type="button"
+                  onClick={() => handleTriggerReport('Cyber Crime Forensics / Digital Scam')}
+                  aria-label="File Digital Crime Incident Desk"
+                  className="px-5 py-3 bg-red-600 hover:bg-red-700 text-white font-bold text-xs uppercase rounded transition-colors cursor-pointer shadow-sm"
                 >
                   File Digital Crime Incident
                 </button>
@@ -361,3 +382,4 @@ export const ServicesPage: React.FC<ServicesPageProps> = ({
     </div>
   );
 };
+export default ServicesPage;

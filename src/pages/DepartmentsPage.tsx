@@ -17,20 +17,33 @@ export const DepartmentsPage: React.FC<DepartmentsPageProps> = ({ onNavigate, on
       d.code.toLowerCase().includes(search.toLowerCase())
   );
 
+  const handleReportToWing = (deptName: string) => {
+    if (onSelectDepartmentForInquiry) {
+      onSelectDepartmentForInquiry(deptName);
+    }
+    onNavigate('home');
+    setTimeout(() => {
+      const el = document.getElementById('report-tip-anchor');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 120);
+  };
+
   return (
     <div className="space-y-12 pb-16">
       {/* Header Banner */}
       <div className="bg-[#0a192f] text-white py-12 px-4 lg:px-8 border-b-4 border-red-600">
         <div className="max-w-7xl mx-auto space-y-3">
           <div className="flex items-center gap-2 text-xs font-mono text-slate-300">
-            <button onClick={() => onNavigate('home')} className="hover:text-white cursor-pointer">
+            <button onClick={() => onNavigate('home')} aria-label="Return to Home" className="hover:text-white cursor-pointer">
               Home
             </button>
             <span>/</span>
             <span className="text-red-400 font-bold">Our Departments</span>
           </div>
           <h1 className="font-headline font-extrabold text-3xl sm:text-4xl lg:text-5xl uppercase tracking-tight">
-            22 Specialized Task Divisions & Wings
+            22 Specialized Task Divisions &amp; Wings
           </h1>
           <p className="text-sm sm:text-base text-slate-300 max-w-3xl">
             Coordinated departmental command structure providing multidisciplinary investigations, legal advocacy, cyber forensics, and grassroots human protection.
@@ -50,6 +63,7 @@ export const DepartmentsPage: React.FC<DepartmentsPageProps> = ({ onNavigate, on
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search wing by name or code..."
+              aria-label="Search departments by name or code"
               className="w-full bg-white border border-slate-300 rounded px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0d47a1]"
             />
           </div>
@@ -83,17 +97,17 @@ export const DepartmentsPage: React.FC<DepartmentsPageProps> = ({ onNavigate, on
 
               <div className="pt-3 border-t border-slate-100 mt-4 flex items-center justify-between">
                 <button
+                  type="button"
                   onClick={() => setSelectedDept(dept)}
+                  aria-label={`View protocol for ${dept.name}`}
                   className="text-xs font-bold text-[#0d47a1] hover:underline uppercase cursor-pointer"
                 >
                   View Protocol
                 </button>
                 <button
-                  onClick={() => {
-                    if (onSelectDepartmentForInquiry) onSelectDepartmentForInquiry(dept.name);
-                    onNavigate('home');
-                    window.location.hash = '#report-tip-anchor';
-                  }}
+                  type="button"
+                  onClick={() => handleReportToWing(dept.name)}
+                  aria-label={`Report incident directly to ${dept.name}`}
                   className="px-2.5 py-1 bg-red-50 hover:bg-red-600 hover:text-white text-red-600 rounded text-[11px] font-bold uppercase transition-colors cursor-pointer"
                 >
                   Report To Wing
@@ -106,10 +120,12 @@ export const DepartmentsPage: React.FC<DepartmentsPageProps> = ({ onNavigate, on
 
       {/* Protocol Modal */}
       {selectedDept && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs">
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs" role="dialog" aria-modal="true" aria-labelledby="dept-modal-title">
           <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl space-y-4 relative animate-scaleUp">
             <button
+              type="button"
               onClick={() => setSelectedDept(null)}
+              aria-label="Close protocol modal"
               className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 p-1 rounded-full cursor-pointer"
             >
               <span className="material-symbols-outlined text-[20px]">close</span>
@@ -119,7 +135,7 @@ export const DepartmentsPage: React.FC<DepartmentsPageProps> = ({ onNavigate, on
               <span className="font-mono text-[10px] text-[#0d47a1] font-bold uppercase block">
                 {selectedDept.code} • {selectedDept.headOffice}
               </span>
-              <h3 className="font-headline font-bold text-lg text-slate-900 mt-0.5">
+              <h3 id="dept-modal-title" className="font-headline font-bold text-lg text-slate-900 mt-0.5">
                 {selectedDept.name}
               </h3>
             </div>
@@ -137,12 +153,26 @@ export const DepartmentsPage: React.FC<DepartmentsPageProps> = ({ onNavigate, on
               </p>
             </div>
 
-            <div className="pt-2 flex justify-end gap-2">
+            <div className="pt-2 flex items-center justify-end gap-2">
               <button
+                type="button"
                 onClick={() => setSelectedDept(null)}
-                className="px-4 py-2 bg-slate-800 text-white rounded text-xs font-bold uppercase cursor-pointer"
+                aria-label="Close modal"
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded text-xs font-bold uppercase cursor-pointer transition-colors"
               >
                 Close
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const deptName = selectedDept.name;
+                  setSelectedDept(null);
+                  handleReportToWing(deptName);
+                }}
+                aria-label={`Transmit telemetry dossier to ${selectedDept.name}`}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-bold uppercase cursor-pointer transition-colors"
+              >
+                Report To This Wing
               </button>
             </div>
           </div>
@@ -151,3 +181,4 @@ export const DepartmentsPage: React.FC<DepartmentsPageProps> = ({ onNavigate, on
     </div>
   );
 };
+export default DepartmentsPage;

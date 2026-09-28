@@ -127,6 +127,7 @@ export const UpiPaymentCard: React.FC<UpiPaymentCardProps> = ({
             <button
               type="button"
               onClick={handleCopyUpi}
+              aria-label={`Copy official UPI ID ${UPI_ID}`}
               className="mt-1 text-[10.5px] font-bold text-[#0d47a1] hover:text-blue-900 bg-blue-50 hover:bg-blue-100 px-2.5 py-0.5 rounded-full transition-colors flex items-center gap-1 cursor-pointer"
             >
               <span className="material-symbols-outlined text-[12px]">
@@ -155,6 +156,7 @@ export const UpiPaymentCard: React.FC<UpiPaymentCardProps> = ({
         <div className="flex items-center gap-2">
           <a
             href={upiUrl}
+            aria-label="Open payment link in external UPI App"
             className="flex-1 py-2 px-3 bg-[#002970] hover:bg-[#001f54] text-white rounded-lg font-bold text-xs text-center flex items-center justify-center gap-1.5 shadow-xs transition-all"
           >
             <span className="material-symbols-outlined text-[15px]">touch_app</span>
@@ -163,6 +165,7 @@ export const UpiPaymentCard: React.FC<UpiPaymentCardProps> = ({
           <button
             type="button"
             onClick={handleCopyUpi}
+            aria-label="Copy UPI ID to clipboard"
             className="py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg font-semibold text-xs flex items-center gap-1 transition-all cursor-pointer"
           >
             <span className="material-symbols-outlined text-[14px]">content_copy</span>

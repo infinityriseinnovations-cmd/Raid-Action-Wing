@@ -157,6 +157,7 @@ export const OfficersDirectory: React.FC<OfficersDirectoryProps> = ({ onVerifyOf
             <button
               onClick={() => setShowBlacklistModal(true)}
               className="px-3.5 py-2 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded border border-red-200 font-bold text-xs uppercase transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+              aria-label="Check Revoked and Blacklisted Badges"
             >
               <span className="material-symbols-outlined text-[16px]">warning</span>
               <span>Check Revoked / Blacklisted Badges</span>
@@ -175,13 +176,16 @@ export const OfficersDirectory: React.FC<OfficersDirectoryProps> = ({ onVerifyOf
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Filter by Name, State (Maharashtra, Gujarat, Uttar Pradesh...), or Designation"
+              aria-label="Filter roster by Name, State, or Designation"
               className="w-full bg-white border border-slate-300 rounded pl-10 pr-4 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0d47a1] placeholder:text-slate-400"
             />
           </div>
 
-          <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
+          <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0" role="tablist" aria-label="Officer division filters">
             <button
               onClick={() => setFilterTab('all')}
+              aria-label={`View all roster of ${officersList.length} officers`}
+              aria-pressed={filterTab === 'all'}
               className={`px-3 py-2 rounded font-bold text-xs uppercase transition-colors cursor-pointer whitespace-nowrap ${
                 filterTab === 'all'
                   ? 'bg-[#0d47a1] text-white shadow-xs'
@@ -192,6 +196,8 @@ export const OfficersDirectory: React.FC<OfficersDirectoryProps> = ({ onVerifyOf
             </button>
             <button
               onClick={() => setFilterTab('national')}
+              aria-label="Filter by National Command"
+              aria-pressed={filterTab === 'national'}
               className={`px-3 py-2 rounded font-bold text-xs uppercase transition-colors cursor-pointer whitespace-nowrap ${
                 filterTab === 'national'
                   ? 'bg-[#0d47a1] text-white shadow-xs'
@@ -202,6 +208,8 @@ export const OfficersDirectory: React.FC<OfficersDirectoryProps> = ({ onVerifyOf
             </button>
             <button
               onClick={() => setFilterTab('state')}
+              aria-label="Filter by State Directors"
+              aria-pressed={filterTab === 'state'}
               className={`px-3 py-2 rounded font-bold text-xs uppercase transition-colors cursor-pointer whitespace-nowrap ${
                 filterTab === 'state'
                   ? 'bg-[#0d47a1] text-white shadow-xs'
@@ -212,6 +220,8 @@ export const OfficersDirectory: React.FC<OfficersDirectoryProps> = ({ onVerifyOf
             </button>
             <button
               onClick={() => setFilterTab('legal')}
+              aria-label="Filter by Legal Council"
+              aria-pressed={filterTab === 'legal'}
               className={`px-3 py-2 rounded font-bold text-xs uppercase transition-colors cursor-pointer whitespace-nowrap ${
                 filterTab === 'legal'
                   ? 'bg-[#0d47a1] text-white shadow-xs'
@@ -231,11 +241,13 @@ export const OfficersDirectory: React.FC<OfficersDirectoryProps> = ({ onVerifyOf
               className="bg-white border-2 border-slate-200 rounded-lg p-4 flex flex-col justify-between hover:border-[#0d47a1] hover:shadow-md transition-all group"
             >
               <div className="space-y-3">
-                <div className="relative aspect-square w-full bg-slate-100 rounded overflow-hidden border border-slate-200">
+                <div className="relative aspect-square w-full bg-slate-100 rounded overflow-hidden border border-slate-200" data-nosnippet>
                   <img
                     src={officer.photoUrl}
-                    alt={officer.name}
-                    className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-300"
+                    alt="Official RAWF Personnel"
+                    data-nosnippet
+                    className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-300 pointer-events-none select-none"
+                    onContextMenu={(e) => e.preventDefault()}
                     onError={(e) => {
                       (e.currentTarget as HTMLImageElement).src = '/rawf-logo.jpg';
                     }}
@@ -278,6 +290,7 @@ export const OfficersDirectory: React.FC<OfficersDirectoryProps> = ({ onVerifyOf
                 <button
                   onClick={() => onVerifyOfficer(officer.badgeNumber)}
                   className="px-2 py-1 bg-slate-100 hover:bg-[#0d47a1] hover:text-white rounded text-slate-700 font-bold uppercase transition-colors cursor-pointer"
+                  aria-label={`Verify badge credentials for ${officer.name}`}
                 >
                   Verify Badge
                 </button>
@@ -297,18 +310,19 @@ export const OfficersDirectory: React.FC<OfficersDirectoryProps> = ({ onVerifyOf
 
       {/* Blacklist Advisory Modal */}
       {showBlacklistModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs">
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs" role="dialog" aria-modal="true" aria-labelledby="blacklist-modal-title">
           <div className="bg-white rounded-xl max-w-lg w-full p-6 shadow-2xl space-y-4 relative animate-scaleUp">
             <button
               onClick={() => setShowBlacklistModal(false)}
               className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 p-1 rounded-full cursor-pointer"
+              aria-label="Close blacklisted badges notice modal"
             >
               <span className="material-symbols-outlined text-[20px]">close</span>
             </button>
 
             <div className="flex items-center gap-2 text-red-600 border-b border-slate-100 pb-3">
               <span className="material-symbols-outlined text-2xl">warning</span>
-              <h3 className="font-headline font-bold text-lg text-slate-900">
+              <h3 id="blacklist-modal-title" className="font-headline font-bold text-lg text-slate-900">
                 Official Revocation & Anti-Impersonation Notice
               </h3>
             </div>
@@ -335,6 +349,7 @@ export const OfficersDirectory: React.FC<OfficersDirectoryProps> = ({ onVerifyOf
               <button
                 onClick={() => setShowBlacklistModal(false)}
                 className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold uppercase rounded cursor-pointer"
+                aria-label="Close revocation advisory notice"
               >
                 Close Notice
               </button>

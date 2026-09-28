@@ -635,6 +635,8 @@ async function startServer() {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    // Prevent search engine indexing of officer images and secure assets
+    res.header('X-Robots-Tag', 'noimageindex');
     if (_req.method === 'OPTIONS') {
       return res.sendStatus(200);
     }
@@ -644,6 +646,40 @@ async function startServer() {
   // ==========================================
   // PUBLIC APIS
   // ==========================================
+
+  // API 0: Public Contact Message / Direct Inquiry
+  app.post('/api/contact', async (req, res) => {
+    const { name, phone, email, subject, message } = req.body;
+    if (!name || !email || !message) {
+      return res.status(400).json({ success: false, message: 'Name, email, and message are required.' });
+    }
+
+    // Dispatch notification to headquarters
+    try {
+      await mailTransporter.sendMail({
+        from: process.env.SMTP_FROM || '"Raid Action Wing Foundation" <info@raidactionwing.in>',
+        to: 'andrew000us@gmail.com, info@raidactionwing.in',
+        subject: `[RAWF Inquiry] New Contact Submission: ${subject || 'General Inquiry'}`,
+        text: `New message received from RAWF Contact Desk:\n\nName: ${name}\nPhone: ${phone || 'N/A'}\nEmail: ${email}\nSubject: ${subject}\n\nMessage:\n${message}\n\nTimestamp: ${new Date().toISOString()}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #0d47a1; border-radius: 8px;">
+            <h2 style="color: #0d47a1; margin-top: 0;">RAWF Public Communication Received</h2>
+            <p><strong>From:</strong> ${name} &lt;${email}&gt;</p>
+            <p><strong>Phone:</strong> ${phone || 'Not provided'}</p>
+            <p><strong>Subject:</strong> ${subject || 'General Inquiry'}</p>
+            <div style="background: #f8fafc; padding: 12px; border-left: 4px solid #0d47a1; margin: 16px 0;">
+              <p style="margin: 0; white-space: pre-wrap;">${message}</p>
+            </div>
+            <p style="font-size: 11px; color: #64748b;">Received at: ${new Date().toISOString()}</p>
+          </div>
+        `
+      });
+    } catch (e: any) {
+      console.error('[SMTP Contact dispatch error]:', e?.message || e);
+    }
+
+    res.json({ success: true, message: 'Communication dispatched to National Action Command Secretariat.' });
+  });
 
   // API 1: Public Officers Directory
   app.get('/api/officers', (req, res) => {
@@ -764,6 +800,58 @@ async function startServer() {
     }
   });
 
+  // API 1G: Upload / Replace Indian Law PDF Document (Admin)
+  app.post('/api/admin/laws/upload', (req, res) => {
+    const { lawId, fileName, pdfBase64, title } = req.body;
+    if (!lawId || !pdfBase64) {
+      return res.status(400).json({ success: false, message: 'Missing lawId or pdfBase64 file data.' });
+    }
+
+    try {
+      const cleanBase64 = pdfBase64.replace(/^data:application\/pdf;base64,/, '').replace(/^data:.*?;base64,/, '');
+      const buffer = Buffer.from(cleanBase64, 'base64');
+
+      // Verify PDF magic header bytes (%PDF)
+      const isPdf = buffer.length > 4 && buffer.slice(0, 4).toString() === '%PDF';
+      if (!isPdf) {
+        return res.status(400).json({ success: false, message: 'Invalid file format. Only official PDF documents are accepted.' });
+      }
+
+      const safeName = (fileName || `${lawId}.pdf`).replace(/[^a-zA-Z0-9._-]/g, '_');
+      const targetRelPath = path.join('assets', 'images', 'indian-laws', safeName);
+      const publicPath = path.join(process.cwd(), 'public', targetRelPath);
+      const publicAltPath = path.join(process.cwd(), 'public', 'assets', 'indian-laws', safeName);
+
+      fs.mkdirSync(path.dirname(publicPath), { recursive: true });
+      fs.mkdirSync(path.dirname(publicAltPath), { recursive: true });
+      fs.writeFileSync(publicPath, buffer);
+      fs.writeFileSync(publicAltPath, buffer);
+
+      const distDir = path.join(process.cwd(), 'dist');
+      if (fs.existsSync(distDir)) {
+        const distPath = path.join(distDir, targetRelPath);
+        fs.mkdirSync(path.dirname(distPath), { recursive: true });
+        fs.writeFileSync(distPath, buffer);
+      }
+
+      const finalUrl = `/${targetRelPath.replace(/\\/g, '/')}`;
+      const fileSizeStr = buffer.length > 1024 * 1024
+        ? `${(buffer.length / (1024 * 1024)).toFixed(1)} MB`
+        : `${Math.round(buffer.length / 1024)} KB`;
+
+      return res.json({
+        success: true,
+        message: `Law document "${title || lawId}" updated successfully.`,
+        fileUrl: finalUrl,
+        fileSize: fileSizeStr,
+        uploadedAt: new Date().toISOString()
+      });
+    } catch (err: any) {
+      console.error('Failed to save law PDF:', err);
+      return res.status(500).json({ success: false, message: err?.message || 'Server error saving law PDF.' });
+    }
+  });
+
   // API 2: Verify Officer Code
   app.post('/api/officers/verify', (req, res) => {
     const { code } = req.body;
@@ -790,10 +878,8 @@ async function startServer() {
       (o) =>
         o.id.toUpperCase() === cleanCode ||
         o.badgeNumber.toUpperCase() === cleanCode ||
-        (o.uidNumber && o.uidNumber.toUpperCase() === cleanCode) ||
         cleanCode.includes(o.badgeNumber.toUpperCase()) ||
         cleanCode.includes(o.id.toUpperCase()) ||
-        (o.uidNumber && cleanCode.includes(o.uidNumber.toUpperCase())) ||
         o.name.toUpperCase().includes(cleanCode)
     );
 
@@ -850,6 +936,28 @@ async function startServer() {
 
     grievancesDatabase[trackingId] = record;
 
+    // Asynchronous notification email dispatch
+    mailTransporter.sendMail({
+      from: process.env.SMTP_FROM || '"Raid Action Wing Foundation" <info@raidactionwing.in>',
+      to: 'andrew000us@gmail.com, info@raidactionwing.in',
+      subject: `[RAWF Alert] Grievance / Tip Logged: ${trackingId}`,
+      text: `A new citizen grievance/tip was lodged.\nTracking ID: ${trackingId}\nCategory: ${category}\nState: ${state}\nTarget: ${targetEntity}\nAnonymous: ${isAnonymous ? 'Yes' : 'No'}\n\nSummary:\n${narrative}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #dc2626; border-radius: 8px;">
+          <h2 style="color: #dc2626; margin-top: 0;">RAWF Citizen Tip / Grievance Logged</h2>
+          <p><strong>Tracking ID:</strong> ${trackingId}</p>
+          <p><strong>Category / Wing:</strong> ${category}</p>
+          <p><strong>Jurisdiction State:</strong> ${state}</p>
+          <p><strong>Target Entity:</strong> ${targetEntity}</p>
+          <p><strong>Reporter:</strong> ${isAnonymous ? 'Anonymous Whistleblower' : `${reporterName} (${reporterContact || 'No contact'})`}</p>
+          <div style="background: #f8fafc; padding: 12px; border-left: 4px solid #dc2626; margin: 16px 0;">
+            <p style="margin: 0; white-space: pre-wrap;">${narrative}</p>
+          </div>
+          <p style="font-size: 11px; color: #64748b;">Logged at: ${new Date().toISOString()}</p>
+        </div>
+      `
+    }).catch(err => console.error('[SMTP Grievance dispatch error]:', err?.message || err));
+
     res.json({
       success: true,
       trackingId,
@@ -900,6 +1008,27 @@ async function startServer() {
     };
 
     applicationsDatabase.unshift(newApp);
+
+    // Asynchronous notification email dispatch
+    mailTransporter.sendMail({
+      from: process.env.SMTP_FROM || '"Raid Action Wing Foundation" <info@raidactionwing.in>',
+      to: 'andrew000us@gmail.com, info@raidactionwing.in',
+      subject: `[RAWF Application] New Member Application: ${appId}`,
+      text: `A new member application was submitted.\nApplication ID: ${appId}\nName: ${fullName}\nEmail: ${email}\nMobile: ${mobile}\nWing: ${wing}\nState: ${state}\nAadhaar Last 4: ${last4}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #16a34a; border-radius: 8px;">
+          <h2 style="color: #16a34a; margin-top: 0;">New RAWF Membership Application</h2>
+          <p><strong>Application ID:</strong> ${appId}</p>
+          <p><strong>Applicant Name:</strong> ${fullName}</p>
+          <p><strong>Email:</strong> ${email}</p>
+          <p><strong>Mobile:</strong> ${mobile}</p>
+          <p><strong>Preferred Wing:</strong> ${wing}</p>
+          <p><strong>State:</strong> ${state}</p>
+          <p><strong>Aadhaar Last 4:</strong> ${last4}</p>
+          <p style="font-size: 11px; color: #64748b;">Submitted at: ${new Date().toISOString()}</p>
+        </div>
+      `
+    }).catch(err => console.error('[SMTP Membership dispatch error]:', err?.message || err));
 
     res.json({
       success: true,
@@ -1218,6 +1347,26 @@ async function startServer() {
     };
 
     donationsDatabase.unshift(donation);
+
+    // Asynchronous notification email dispatch
+    mailTransporter.sendMail({
+      from: process.env.SMTP_FROM || '"Raid Action Wing Foundation" <info@raidactionwing.in>',
+      to: 'andrew000us@gmail.com, info@raidactionwing.in',
+      subject: `[RAWF Donation] Contribution Received: ₹${donationAmount} (${receiptId})`,
+      text: `A citizen contribution was confirmed.\nReceipt ID: ${receiptId}\nDonor: ${donorName}\nAmount: ₹${donationAmount}\nFund: ${fund}\nUTR: ${utrNumber || 'N/A'}\nPhone: ${donorPhone || 'N/A'}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #0d47a1; border-radius: 8px;">
+          <h2 style="color: #0d47a1; margin-top: 0;">Contribution Confirmed &amp; 80G Receipt Issued</h2>
+          <p><strong>Receipt ID:</strong> ${receiptId}</p>
+          <p><strong>Donor Name:</strong> ${donorName}</p>
+          <p><strong>Amount:</strong> ₹${donationAmount}</p>
+          <p><strong>Fund:</strong> ${fund}</p>
+          <p><strong>Payment Reference (UTR):</strong> ${utrNumber || 'Direct Payment'}</p>
+          <p><strong>PAN:</strong> ${panNumber || 'Not provided'}</p>
+          <p style="font-size: 11px; color: #64748b;">Issued at: ${new Date().toISOString()}</p>
+        </div>
+      `
+    }).catch(err => console.error('[SMTP Donation dispatch error]:', err?.message || err));
 
     res.json({
       success: true,

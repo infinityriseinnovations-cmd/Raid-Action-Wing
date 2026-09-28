@@ -112,11 +112,13 @@ export const OfficialIdCard: React.FC<OfficialIdCardProps> = ({
               <div className="flex gap-3.5 items-start">
                 {/* Photo Box (Height 154px to fill bottom gap down towards barcode) */}
                 <div className="w-[108px] shrink-0 flex flex-col items-center">
-                  <div className="w-[108px] h-[154px] bg-slate-100 border border-[#333333] overflow-hidden flex items-center justify-center shadow-2xs">
+                  <div className="w-[108px] h-[154px] bg-slate-100 border border-[#333333] overflow-hidden flex items-center justify-center shadow-2xs" data-nosnippet>
                     <img
                       src={photoUrl}
-                      alt={name}
-                      className="w-full h-full object-cover object-center"
+                      alt="RAWF ID Card Personnel"
+                      data-nosnippet
+                      className="w-full h-full object-cover object-center select-none"
+                      onContextMenu={(e) => e.preventDefault()}
                       onError={(e) => {
                         (e.currentTarget as HTMLImageElement).src = '/rawf-logo.jpg';
                       }}

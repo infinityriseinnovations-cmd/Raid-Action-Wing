@@ -8,8 +8,8 @@ import {
 } from '../utils/idCardExport';
 
 export const IdCardDownloadPortal: React.FC = () => {
-  const [uidInput, setUidInput] = useState('RAWF/2026/1995');
-  const [emailInput, setEmailInput] = useState('akshay.patil@raidactionwing.in');
+  const [uidInput, setUidInput] = useState('');
+  const [emailInput, setEmailInput] = useState('');
   const [otpStep, setOtpStep] = useState(false);
   const [otpCode, setOtpCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -38,7 +38,7 @@ export const IdCardDownloadPortal: React.FC = () => {
       'https://lh3.googleusercontent.com/aida-public/AB6AXuDUm1YEgLpksGzi3w_3gvQPMzQHxeJlPGIDPYSLpaJCRKoYNLLGbcUdrCUKoSaRyfEzL4ATnteKP2TfyzfoAVh1i5Kpa_VmIijrnduQpaY8f3zG3WoGPNJrVYlAkNW10Af4Sgz53Lwkm1nL1Xp2RSJO1N4pId9Ml-OLibxjnYl8ahmBmrReo3ewBqIGmPn5k_MsnyohwJdt7FnnDgVW2dEYGojLicyUTmbxn8Iv-d5fNMODD99vAKO6VQ'
   });
 
-  const [isReadyToDownload, setIsReadyToDownload] = useState(true);
+  const [isReadyToDownload, setIsReadyToDownload] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [modalViewMode, setModalViewMode] = useState<'side-by-side' | 'stacked'>('side-by-side');
   const [verifyingOtp, setVerifyingOtp] = useState(false);
@@ -272,7 +272,8 @@ export const IdCardDownloadPortal: React.FC = () => {
                   required
                   value={uidInput}
                   onChange={(e) => setUidInput(e.target.value)}
-                  placeholder="e.g. RAWF/2026/1995"
+                  placeholder="RAWF/2026/xxxx"
+                  aria-label="Officer UID Number"
                   className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2.5 text-xs font-mono uppercase text-slate-900 focus:outline-none focus:border-[#0d47a1]"
                 />
                 <span className="text-[10px] text-slate-400 mt-0.5 block font-mono">
@@ -289,7 +290,8 @@ export const IdCardDownloadPortal: React.FC = () => {
                   required
                   value={emailInput}
                   onChange={(e) => setEmailInput(e.target.value)}
-                  placeholder="e.g. akshay.patil@raidactionwing.in"
+                  placeholder="Enter your email id"
+                  aria-label="Registered Email ID"
                   className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#0d47a1] font-mono"
                 />
               </div>
@@ -298,6 +300,7 @@ export const IdCardDownloadPortal: React.FC = () => {
                 <button
                   type="submit"
                   disabled={loading}
+                  aria-label="Verify Credentials & Generate OTP"
                   className="w-full py-2.5 bg-[#0d47a1] hover:bg-blue-900 text-white font-bold text-xs uppercase tracking-wider rounded transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
                 >
                   {loading ? (
@@ -317,6 +320,7 @@ export const IdCardDownloadPortal: React.FC = () => {
                       type="button"
                       onClick={handleLookupAndGenerateOtp}
                       disabled={loading}
+                      aria-label="Resend Security Verification OTP"
                       className="text-[11px] text-[#0d47a1] hover:underline font-semibold cursor-pointer"
                     >
                       Resend Code
@@ -329,12 +333,14 @@ export const IdCardDownloadPortal: React.FC = () => {
                       value={otpCode}
                       onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
                       placeholder="e.g. 582914"
+                      aria-label="6-digit security verification OTP code"
                       className="flex-1 bg-slate-50 border border-slate-300 rounded px-3 py-2 text-sm font-mono text-center tracking-widest text-slate-900 focus:outline-none focus:border-[#0d47a1] font-bold"
                     />
                     <button
                       type="button"
                       disabled={verifyingOtp || !otpCode.trim()}
                       onClick={handleVerifyOtpAndUnlock}
+                      aria-label="Verify OTP and unlock digital ID card"
                       className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-bold text-xs uppercase cursor-pointer disabled:opacity-50 flex items-center gap-1"
                     >
                       {verifyingOtp ? (
@@ -351,6 +357,7 @@ export const IdCardDownloadPortal: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setOtpCode(devOtpHint)}
+                        aria-label={`Autofill test OTP ${devOtpHint}`}
                         className="text-blue-700 font-mono font-bold hover:underline cursor-pointer flex items-center gap-1"
                       >
                         <span>Autofill {devOtpHint}</span>
@@ -459,11 +466,11 @@ export const IdCardDownloadPortal: React.FC = () => {
                 </div>
 
                 {/* Attached Image displayed as-is */}
-                <div className="w-full bg-slate-950 flex items-center justify-center p-3 sm:p-5">
+                <div className="w-full bg-slate-50 flex items-center justify-center overflow-hidden">
                   <img
                     src="/image.png"
                     alt="Raid Action Wing Foundation Official Insignia"
-                    className="w-full h-auto max-h-[380px] sm:max-h-[440px] object-contain rounded-xl shadow-lg border border-slate-800"
+                    className="w-full h-auto object-contain block"
                     referrerPolicy="no-referrer"
                   />
                 </div>

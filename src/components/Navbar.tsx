@@ -92,6 +92,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => handleNavClick('admin')}
               className="hidden lg:inline-flex items-center gap-1 bg-amber-600/90 hover:bg-amber-600 text-white px-2 py-0.5 rounded font-bold transition-colors cursor-pointer text-[11px]"
               title="Director General Admin Command"
+              aria-label="Director General Admin Command"
             >
               <span className="material-symbols-outlined text-[13px]">admin_panel_settings</span>
               <span>Admin</span>
@@ -100,6 +101,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={() => handleNavClick('apply-online')}
               className="hidden sm:inline-flex items-center gap-1 bg-red-600 hover:bg-red-700 text-white px-2.5 py-0.5 rounded font-bold transition-colors cursor-pointer"
+              aria-label="Apply online for RAWF membership"
             >
               Apply Online
             </button>
@@ -107,6 +109,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={() => handleNavClick('rights')}
               className="hover:text-white transition-colors flex items-center gap-1 cursor-pointer"
+              aria-label="Navigate to RTI Cell & Citizen Rights"
             >
               <span className="material-symbols-outlined text-[14px]">article</span>
               <span>RTI Cell</span>
@@ -116,6 +119,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={onToggleLang}
               className="flex items-center gap-1 cursor-pointer hover:text-white bg-blue-900/60 px-2 py-0.5 rounded border border-blue-700/50 transition-colors"
               title="Toggle English / Hindi"
+              aria-label={`Switch language to ${lang === 'en' ? 'Hindi' : 'English'}`}
             >
               <span className="material-symbols-outlined text-[14px]">g_translate</span>
               <span className="font-bold">{lang === 'en' ? 'EN' : 'HI'}</span>
@@ -130,31 +134,21 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Logo & Title */}
           <button
             onClick={() => handleNavClick('home')}
-            className="min-w-0 flex-1 sm:flex-initial flex items-center gap-2 sm:gap-3 group py-1 text-left cursor-pointer overflow-hidden"
+            className="min-w-0 flex-1 sm:flex-initial h-full flex items-center gap-2.5 sm:gap-3.5 group py-1.5 text-center sm:text-left cursor-pointer overflow-hidden"
+            aria-label="Raid Action Wing Foundation - Return to Homepage"
           >
-            <RawfLogo className="w-10 h-10 sm:w-12 sm:h-12 shrink-0" />
-            <div className="flex flex-col min-w-0">
-              <div className="flex items-center gap-1 sm:gap-2 min-w-0">
-                <span className="font-headline font-bold text-xs xs:text-sm sm:text-lg lg:text-xl text-[#0a192f] tracking-tight leading-tight group-hover:text-[#0d47a1] transition-colors truncate">
-                  RAID ACTION WING
-                </span>
-                <span className="hidden sm:inline font-headline font-bold text-xs sm:text-lg lg:text-xl text-[#0a192f] tracking-tight leading-tight">
-                  FOUNDATION
-                </span>
-                <span className="bg-red-600 text-white font-mono text-[9px] sm:text-[10px] font-bold px-1 sm:px-1.5 py-0.5 rounded leading-none shrink-0">
-                  (F)
-                </span>
-              </div>
-              <div className="flex items-center gap-1 min-w-0">
-                <span className="font-bold text-[11px] sm:text-base text-red-600 tracking-tight leading-tight truncate">
-                  छापा कार्यवाही विभाग
-                </span>
-                <span className="bg-[#0d47a1] text-white font-mono text-[8px] sm:text-[9px] font-bold px-1 py-0.2 rounded leading-none shrink-0">
-                  (एफ)
-                </span>
-              </div>
-              <span className="text-[10px] font-semibold text-slate-500 tracking-wider uppercase mt-0.5 hidden md:block">
-                JAI HIND CITIZEN VIGILANCE & ANTI-CORRUPTION NETWORK
+            <div className="h-full flex items-center justify-center shrink-0 aspect-square">
+              <RawfLogo className="w-full h-full max-h-full object-contain" />
+            </div>
+            <div className="flex flex-col justify-center items-center text-center min-w-0 space-y-1">
+              <span className="font-headline font-bold text-xs xs:text-sm sm:text-lg lg:text-xl text-[#0a192f] tracking-tight leading-none group-hover:text-[#0d47a1] transition-colors truncate block">
+                RAID ACTING WING (F)
+              </span>
+              <span className="font-id-hindi font-bold text-[12px] sm:text-[15.5px] text-red-600 tracking-normal leading-none truncate block">
+                छापा कार्यवाही विभाग (एफ)
+              </span>
+              <span className="text-[9px] sm:text-[10px] font-bold text-slate-600 tracking-wider uppercase leading-none block">
+                GOVERNMENT OF INDIA
               </span>
             </div>
           </button>
@@ -286,14 +280,73 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </div>
 
-            <button
-              onClick={() => handleNavClick('indian-laws')}
-              className={`px-2.5 py-2 rounded transition-colors cursor-pointer ${
-                currentPage === 'indian-laws' ? 'text-[#0d47a1] bg-blue-50' : 'hover:text-[#0d47a1] hover:bg-slate-50'
-              }`}
+            {/* Indian Laws with Submenu */}
+            <div
+              className="relative"
+              onMouseEnter={() => setOpenDropdown('indian-laws')}
+              onMouseLeave={() => setOpenDropdown(null)}
             >
-              Indian Laws
-            </button>
+              <button
+                onClick={() => handleNavClick('indian-laws')}
+                className={`px-2.5 py-2 rounded transition-colors cursor-pointer flex items-center gap-0.5 ${
+                  currentPage === 'indian-laws' ? 'text-[#0d47a1] bg-blue-50' : 'hover:text-[#0d47a1] hover:bg-slate-50'
+                }`}
+              >
+                <span>Indian Laws</span>
+                <span className="material-symbols-outlined text-[16px]">arrow_drop_down</span>
+              </button>
+              {openDropdown === 'indian-laws' && (
+                <div className="absolute top-full left-0 w-64 bg-white border border-slate-200 rounded-lg shadow-xl py-2 z-50 animate-fadeIn">
+                  <div className="px-3 py-1 text-[10px] font-mono text-slate-400 font-bold uppercase border-b border-slate-100">
+                    Statutory Laws (raidactionwing.in)
+                  </div>
+                  <button
+                    onClick={() => handleNavClick('indian-laws')}
+                    className="w-full text-left px-4 py-1.5 hover:bg-slate-50 text-slate-800 text-xs font-semibold cursor-pointer block"
+                  >
+                    Rulings on Indian Police
+                  </button>
+                  <button
+                    onClick={() => handleNavClick('indian-laws')}
+                    className="w-full text-left px-4 py-1.5 hover:bg-slate-50 text-slate-800 text-xs font-semibold cursor-pointer block"
+                  >
+                    Judiciary Systems of India
+                  </button>
+                  <button
+                    onClick={() => handleNavClick('indian-laws')}
+                    className="w-full text-left px-4 py-1.5 hover:bg-slate-50 text-slate-800 text-xs font-semibold cursor-pointer block"
+                  >
+                    Sexual Harassment (POSH)
+                  </button>
+                  <button
+                    onClick={() => handleNavClick('indian-laws')}
+                    className="w-full text-left px-4 py-1.5 hover:bg-slate-50 text-slate-800 text-xs font-semibold cursor-pointer block"
+                  >
+                    Anticipatory Bail
+                  </button>
+                  <button
+                    onClick={() => handleNavClick('indian-laws')}
+                    className="w-full text-left px-4 py-1.5 hover:bg-slate-50 text-slate-800 text-xs font-semibold cursor-pointer block"
+                  >
+                    Constitution of India - Hindi
+                  </button>
+                  <button
+                    onClick={() => handleNavClick('indian-laws')}
+                    className="w-full text-left px-4 py-1.5 hover:bg-slate-50 text-slate-800 text-xs font-semibold cursor-pointer block"
+                  >
+                    Constitution of India - English
+                  </button>
+                  <div className="border-t border-slate-100 my-1" />
+                  <button
+                    onClick={() => handleNavClick('indian-laws')}
+                    className="w-full text-left px-4 py-1.5 hover:bg-blue-50 text-[#0d47a1] text-xs font-bold cursor-pointer block flex items-center justify-between"
+                  >
+                    <span>View All Statutory Laws</span>
+                    <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                  </button>
+                </div>
+              )}
+            </div>
 
             <button
               onClick={() => handleNavClick('activities')}

@@ -10,8 +10,8 @@ interface AdminPageProps {
 export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
   // Authentication State
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('rawf_admin_token'));
-  const [username, setUsername] = useState('admin@raidactionwing.in');
-  const [password, setPassword] = useState('Admin@RAWF2026!');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
@@ -220,6 +220,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
       }).catch(() => {});
     }
     localStorage.removeItem('rawf_admin_token');
+    localStorage.removeItem('rawf_laws_admin');
     setToken(null);
   };
 
@@ -949,7 +950,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="admin@raidactionwing.in"
+                placeholder="username"
                 className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2.5 text-slate-900 focus:outline-none focus:border-[#0d47a1]"
               />
             </div>
@@ -964,7 +965,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••••••"
+                  placeholder="password"
                   className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2.5 text-slate-900 focus:outline-none focus:border-[#0d47a1] pr-10"
                 />
                 <button
@@ -993,14 +994,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
             </button>
           </form>
 
-          {/* Demo Pre-fill Hint */}
+          {/* Return Link */}
           <div className="pt-2 border-t border-slate-100 text-center space-y-2">
-            <span className="text-[11px] text-slate-500 block">
-              Default Credentials Configured:
-            </span>
-            <div className="inline-block bg-slate-100 px-3 py-1.5 rounded font-mono text-[10px] text-slate-700">
-              admin@raidactionwing.in / Admin@RAWF2026!
-            </div>
             <div>
               <button
                 onClick={() => onNavigate('home')}
@@ -2213,7 +2208,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-slate-400">Coverage:</span>
                     <span className="font-mono text-slate-900 font-semibold">
-                      ID Card Generator, Appointment Letter, Header, Verification Modal, Watermarks
+                      Top Hero Banner, ID Card Generator, Appointment Letter, Header/Navbar, Verification Modal, Watermarks &amp; Footer
                     </span>
                   </div>
                   <p className="text-slate-500 text-[11px] pt-1 leading-relaxed">

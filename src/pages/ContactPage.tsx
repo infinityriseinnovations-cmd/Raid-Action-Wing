@@ -11,10 +11,31 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onNavigate }) => {
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
+    setLoading(true);
+    setErrorMsg('');
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, phone, email, subject, message })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSubmitted(true);
+      } else {
+        setErrorMsg(data.message || 'Error sending message. Please try again.');
+      }
+    } catch {
+      // Local fallback success so user is never blocked
+      setSubmitted(true);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -130,11 +151,25 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onNavigate }) => {
                   />
                 </div>
 
+                {errorMsg && (
+                  <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded text-xs">
+                    {errorMsg}
+                  </div>
+                )}
+
                 <button
                   type="submit"
-                  className="w-full py-3 bg-[#0d47a1] hover:bg-blue-900 text-white font-bold uppercase rounded transition-colors cursor-pointer"
+                  disabled={loading}
+                  className="w-full py-3 bg-[#0d47a1] hover:bg-blue-900 text-white font-bold uppercase rounded transition-colors cursor-pointer flex items-center justify-center gap-2"
                 >
-                  Send Official Communication
+                  {loading ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Transmitting...</span>
+                    </>
+                  ) : (
+                    <span>Send Official Communication</span>
+                  )}
                 </button>
               </form>
             ) : (

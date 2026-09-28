@@ -162,6 +162,7 @@ export const MembershipApplySection: React.FC = () => {
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                       placeholder="e.g. Ramesh Chandra Sharma"
+                      aria-label="Full Name as per Aadhaar"
                       className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0d47a1]"
                     />
                   </div>
@@ -172,6 +173,7 @@ export const MembershipApplySection: React.FC = () => {
                     <select
                       value={gender}
                       onChange={(e) => setGender(e.target.value)}
+                      aria-label="Select Gender"
                       className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0d47a1] font-semibold cursor-pointer"
                     >
                       <option value="Male">Male</option>
@@ -192,6 +194,7 @@ export const MembershipApplySection: React.FC = () => {
                       value={mobile}
                       onChange={(e) => setMobile(e.target.value)}
                       placeholder="e.g. +91 98765 43210"
+                      aria-label="Mobile or WhatsApp Number"
                       className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0d47a1]"
                     />
                   </div>
@@ -205,6 +208,7 @@ export const MembershipApplySection: React.FC = () => {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="name@domain.com"
+                      aria-label="Applicant Email Address"
                       className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0d47a1]"
                     />
                   </div>
@@ -219,6 +223,7 @@ export const MembershipApplySection: React.FC = () => {
                       required
                       value={wing}
                       onChange={(e) => setWing(e.target.value)}
+                      aria-label="Select Desired Role or Designation"
                       className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0d47a1]"
                     >
                       <option value="">Select Level & Designation...</option>
@@ -255,6 +260,7 @@ export const MembershipApplySection: React.FC = () => {
                       required
                       value={state}
                       onChange={(e) => setState(e.target.value)}
+                      aria-label="Select State or Union Territory Jurisdiction"
                       className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0d47a1]"
                     >
                       <option value="">Select State...</option>
@@ -281,6 +287,7 @@ export const MembershipApplySection: React.FC = () => {
                       value={aadhaarNumber}
                       onChange={(e) => setAadhaarNumber(e.target.value)}
                       placeholder="XXXX-XXXX-XXXX"
+                      aria-label="Aadhaar or Voter ID Number"
                       className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0d47a1] font-mono"
                     />
                   </div>
@@ -296,6 +303,7 @@ export const MembershipApplySection: React.FC = () => {
                     value={background}
                     onChange={(e) => setBackground(e.target.value)}
                     placeholder="Brief summary of your profession, educational qualifications, and dedication to anti-corruption public service..."
+                    aria-label="Professional Background and Public Service Motivation"
                     className="w-full bg-slate-50 border border-slate-300 rounded p-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#0d47a1]"
                   />
                 </div>
@@ -306,6 +314,7 @@ export const MembershipApplySection: React.FC = () => {
                     id="memberOath"
                     checked={oathChecked}
                     onChange={(e) => setOathChecked(e.target.checked)}
+                    aria-label="Affirm RAWF Code of Ethics and anti-extortion oath"
                     className="accent-red-600 rounded mt-0.5 cursor-pointer"
                   />
                   <label htmlFor="memberOath" className="text-xs text-slate-600 font-medium cursor-pointer">
@@ -314,7 +323,7 @@ export const MembershipApplySection: React.FC = () => {
                 </div>
 
                 {errorMsg && (
-                  <div className="text-xs font-mono text-red-600 font-semibold">
+                  <div className="text-xs font-mono text-red-600 font-semibold" role="alert">
                     {errorMsg}
                   </div>
                 )}
@@ -322,6 +331,7 @@ export const MembershipApplySection: React.FC = () => {
                 <button
                   type="submit"
                   disabled={loading}
+                  aria-label="Submit Application for Membership Verification"
                   className="w-full py-3 bg-[#0d47a1] hover:bg-blue-900 text-white font-bold text-xs uppercase tracking-wider rounded transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {loading ? (

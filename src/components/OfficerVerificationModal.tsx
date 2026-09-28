@@ -78,11 +78,12 @@ export const OfficerVerificationModal: React.FC<OfficerVerificationModalProps> =
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs">
+    <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs" role="dialog" aria-modal="true" aria-labelledby="verification-modal-title">
       <div className="bg-white rounded-xl max-w-lg w-full p-6 shadow-2xl space-y-4 relative animate-scaleUp">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 p-1 rounded-full cursor-pointer"
+          aria-label="Close verification modal"
         >
           <span className="material-symbols-outlined text-[20px]">close</span>
         </button>
@@ -95,27 +96,30 @@ export const OfficerVerificationModal: React.FC<OfficerVerificationModalProps> =
             <span className="text-[10px] font-mono text-[#0d47a1] font-bold uppercase block">
               NATIONAL INTEGRITY PROTOCOL
             </span>
-            <h3 className="font-headline font-bold text-lg text-slate-900">
+            <h3 id="verification-modal-title" className="font-headline font-bold text-lg text-slate-900">
               RAWF Officer Verification Desk
             </h3>
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3">
-          <label className="block text-xs font-bold uppercase text-slate-700">
+          <label htmlFor="officer-verification-code-input" className="block text-xs font-bold uppercase text-slate-700">
             Enter Officer Code / Badge / Full Name
           </label>
           <div className="flex gap-2">
             <input
+              id="officer-verification-code-input"
               type="text"
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              placeholder="e.g. RW-MH-102 or Manoj Chauhan"
+              placeholder="Enter ID (E.G. RAWF/2026/xxxx)"
+              aria-label="Officer identification code, badge number, or full name"
               className="flex-1 bg-slate-50 border border-slate-300 rounded px-3 py-2 text-xs font-mono uppercase text-slate-900 focus:outline-none focus:border-[#0d47a1]"
             />
             <button
               type="submit"
               disabled={loading}
+              aria-label="Verify officer credentials"
               className="px-4 py-2 bg-[#0d47a1] hover:bg-blue-900 text-white rounded font-bold text-xs uppercase transition-all cursor-pointer flex items-center gap-1"
             >
               {loading ? (
@@ -143,12 +147,14 @@ export const OfficerVerificationModal: React.FC<OfficerVerificationModalProps> =
                 </div>
 
                 <div className="flex gap-3.5 items-start">
-                  <div className="w-16 h-16 rounded bg-slate-200 overflow-hidden shrink-0 border border-slate-300">
+                  <div className="w-16 h-16 rounded bg-slate-200 overflow-hidden shrink-0 border border-slate-300" data-nosnippet>
                     {result.officer.photoUrl ? (
                       <img
                         src={result.officer.photoUrl}
-                        alt={result.officer.name}
-                        className="w-full h-full object-cover"
+                        alt="Accredited Personnel"
+                        data-nosnippet
+                        className="w-full h-full object-cover select-none pointer-events-none"
+                        onContextMenu={(e) => e.preventDefault()}
                       />
                     ) : (
                       <RawfLogo className="w-full h-full" />
