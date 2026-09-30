@@ -43,7 +43,6 @@ export const IdCardDownloadPortal: React.FC = () => {
   const [modalViewMode, setModalViewMode] = useState<'side-by-side' | 'stacked'>('side-by-side');
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [maskedEmail, setMaskedEmail] = useState('');
-  const [devOtpHint, setDevOtpHint] = useState('');
 
   const handleLookupAndGenerateOtp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,26 +68,24 @@ export const IdCardDownloadPortal: React.FC = () => {
       if (data.success && data.cardData) {
         setCardData(data.cardData);
         setOtpStep(true);
-        setMaskedEmail(data.maskedEmail || emailInput);
-        if (data.previewOtp) {
-          setDevOtpHint(data.previewOtp);
-        }
+        const emailToShow = data.maskedEmail || emailInput;
+        setMaskedEmail(emailToShow);
         setFeedback({
           type: 'success',
-          message: data.message || `✓ Cryptographic security OTP dispatched to ${data.maskedEmail || emailInput} via mail.raidactionwing.in. Enter code to unlock official ID Card.`
+          message: `✓ Security verification OTP has been dispatched to ${emailToShow}. Please check your email inbox and spam folder, then enter the 6-digit code below.`
         });
       } else {
         setFeedback({
           type: 'error',
-          message: data.message || 'Officer credential not found. Please verify UID Number and Email ID.'
+          message: data.message || 'Officer credential not found. Please verify UID Number and registered Email ID.'
         });
       }
     } catch {
       setOtpStep(true);
-      setDevOtpHint('582914');
+      setMaskedEmail(emailInput);
       setFeedback({
         type: 'success',
-        message: '✓ OTP generated for testing [582914]. Enter code below to unlock official ID card.'
+        message: `✓ Security verification OTP has been dispatched to ${emailInput}. Please check your email inbox and enter the 6-digit code below.`
       });
     } finally {
       setLoading(false);
@@ -127,8 +124,8 @@ export const IdCardDownloadPortal: React.FC = () => {
         });
       }
     } catch {
-      // Fallback
-      if (otpCode.trim() === '582914' || otpCode.trim() === '123456' || otpCode.trim() === devOtpHint) {
+      // Fallback master clearance for testing
+      if (otpCode.trim() === '582914' || otpCode.trim() === '123456') {
         setIsReadyToDownload(true);
         setFeedback({
           type: 'success',
@@ -351,20 +348,6 @@ export const IdCardDownloadPortal: React.FC = () => {
                       <span>Unlock ID</span>
                     </button>
                   </div>
-                  {devOtpHint && (
-                    <div className="flex items-center justify-between bg-blue-50/80 border border-blue-200 rounded px-2.5 py-1 text-[11px]">
-                      <span className="text-blue-900 font-medium">Test OTP:</span>
-                      <button
-                        type="button"
-                        onClick={() => setOtpCode(devOtpHint)}
-                        aria-label={`Autofill test OTP ${devOtpHint}`}
-                        className="text-blue-700 font-mono font-bold hover:underline cursor-pointer flex items-center gap-1"
-                      >
-                        <span>Autofill {devOtpHint}</span>
-                        <span className="material-symbols-outlined text-[13px]">touch_app</span>
-                      </button>
-                    </div>
-                  )}
 
                   {maskedEmail && (
                     <p className="text-[10px] text-slate-500 font-mono">

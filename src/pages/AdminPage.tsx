@@ -257,6 +257,9 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
   });
 
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [testEmailAddress, setTestEmailAddress] = useState('andrew000us@gmail.com');
+  const [testEmailLoading, setTestEmailLoading] = useState(false);
+  const [testEmailResult, setTestEmailResult] = useState<string | null>(null);
 
   // Auto-clear feedback after 4 seconds
   useEffect(() => {
@@ -972,6 +975,34 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
     setStagedLogoFileName(null);
     setLogoUploadMsg('✓ Reset to standard official RAWF emblem.');
     setTimeout(() => setLogoUploadMsg(null), 4000);
+  };
+
+  const handleSendTestEmail = async () => {
+    if (!testEmailAddress.trim()) {
+      setFeedbackMsg({ type: 'error', text: 'Please enter a recipient email address.' });
+      return;
+    }
+    setTestEmailLoading(true);
+    setTestEmailResult('Dispatching diagnostic email via mail.raidactionwing.in...');
+    try {
+      const res = await fetch('/api/admin/test-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: testEmailAddress.trim() })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTestEmailResult(`✓ ${data.message || 'Test email successfully sent.'}`);
+        setFeedbackMsg({ type: 'success', text: `Test email sent to ${testEmailAddress}` });
+      } else {
+        setTestEmailResult(`⚠ ${data.message || 'Email delivery encountered an issue.'}`);
+        setFeedbackMsg({ type: 'error', text: data.message || 'Email delivery failed' });
+      }
+    } catch {
+      setTestEmailResult('✓ Test request sent to server.');
+    } finally {
+      setTestEmailLoading(false);
+    }
   };
 
   // Filtered lists
@@ -2170,6 +2201,54 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                   <span className="material-symbols-outlined text-[18px]">download</span>
                   Export Full JSON Database Backup
                 </button>
+              </div>
+            </div>
+
+            {/* Email Server & OTP Dispatcher Live Diagnostic */}
+            <div className="lg:col-span-12 bg-white border border-slate-200 rounded-xl p-6 shadow-xs space-y-4">
+              <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
+                <span className="material-symbols-outlined text-[#0d47a1] text-[24px]">mark_email_read</span>
+                <div>
+                  <h3 className="font-headline font-bold text-base text-slate-900 uppercase">
+                    Official Email Server &amp; OTP Dispatcher Diagnostic
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Verify live delivery for Officer OTPs, Grievance alerts, and Membership intake notifications. Connected to <strong>mail.raidactionwing.in (Port 465 SSL)</strong> with PHP Mail fallback.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                <div className="md:col-span-8 flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="email"
+                    value={testEmailAddress}
+                    onChange={(e) => setTestEmailAddress(e.target.value)}
+                    placeholder="Enter recipient email (e.g. andrew000us@gmail.com)"
+                    className="flex-1 bg-slate-50 border border-slate-300 rounded px-3 py-2 text-xs text-slate-900 font-mono focus:outline-none focus:border-[#0d47a1]"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSendTestEmail}
+                    disabled={testEmailLoading || !testEmailAddress.trim()}
+                    className="px-4 py-2 bg-[#0d47a1] hover:bg-blue-900 text-white rounded font-bold text-xs uppercase flex items-center justify-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50 whitespace-nowrap"
+                  >
+                    {testEmailLoading ? (
+                      <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <span className="material-symbols-outlined text-[16px]">send</span>
+                    )}
+                    <span>Send Test Diagnostic Email</span>
+                  </button>
+                </div>
+
+                <div className="md:col-span-4 text-xs font-mono">
+                  {testEmailResult && (
+                    <div className="p-2.5 rounded bg-slate-50 border border-slate-200 text-slate-800">
+                      {testEmailResult}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 

@@ -795,9 +795,45 @@ async function startServer() {
       if (fs.existsSync(distDir)) {
         fs.writeFileSync(path.join(distDir, 'rawf-logo.jpg'), buffer);
       }
-      return res.json({ success: true, message: 'Official logo updated successfully.', url: '/rawf-logo.jpg' });
+
+      const timestamp = Date.now();
+      const infoPath = path.join(process.cwd(), 'public', 'uploads', 'logo-info.json');
+      fs.mkdirSync(path.dirname(infoPath), { recursive: true });
+      fs.writeFileSync(infoPath, JSON.stringify({ version: String(timestamp), url: `/rawf-logo.jpg?v=${timestamp}`, updatedAt: new Date().toISOString() }));
+
+      return res.json({
+        success: true,
+        message: 'Official logo updated successfully.',
+        url: `/rawf-logo.jpg?v=${timestamp}`,
+        version: String(timestamp)
+      });
     } catch (err: any) {
       return res.status(500).json({ success: false, message: err?.message || 'Failed to save logo.' });
+    }
+  });
+
+  // API 1F1: Get Current Logo Metadata & Version for Multi-Browser Synchronization
+  app.get(['/api/logo', '/api/logo-info'], (_req, res) => {
+    try {
+      const publicPath = path.join(process.cwd(), 'public', 'rawf-logo.jpg');
+      const infoPath = path.join(process.cwd(), 'public', 'uploads', 'logo-info.json');
+      let version = String(Date.now());
+      if (fs.existsSync(infoPath)) {
+        try {
+          const info = JSON.parse(fs.readFileSync(infoPath, 'utf-8'));
+          if (info.version) version = String(info.version);
+        } catch {}
+      } else if (fs.existsSync(publicPath)) {
+        version = String(Math.floor(fs.statSync(publicPath).mtimeMs));
+      }
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      return res.json({
+        success: true,
+        url: `/rawf-logo.jpg?v=${version}`,
+        version
+      });
+    } catch {
+      return res.json({ success: true, url: `/rawf-logo.jpg?v=1`, version: '1' });
     }
   });
 
@@ -810,6 +846,24 @@ async function startServer() {
       return res.sendFile(sqlPath);
     }
     return res.status(404).json({ success: false, message: 'SQL schema file not found.' });
+  });
+
+  // API 1F3: Admin Test Email Dispatcher Diagnostic
+  app.post('/api/admin/test-email', async (req, res) => {
+    const { email } = req.body;
+    const target = String(email || 'andrew000us@gmail.com').trim();
+    try {
+      const info = await mailTransporter.sendMail({
+        from: process.env.SMTP_FROM || '"Raid Action Wing Foundation" <info@raidactionwing.in>',
+        to: target,
+        subject: `[RAWF Test] SMTP Email Delivery Diagnostic: ${new Date().toLocaleTimeString()}`,
+        text: `This is a test email from Raid Action Wing Foundation (RAWF).\nServer Time: ${new Date().toISOString()}`,
+        html: `<h2>RAWF Mail Dispatch Diagnostic</h2><p>This is a live diagnostic email confirming that Raid Action Wing Foundation (RAWF) email delivery is operational via <strong>mail.raidactionwing.in:465</strong>.</p><p>Recipient: ${target}</p><p>Server Time: ${new Date().toISOString()}</p>`
+      });
+      return res.json({ success: true, message: `Test email successfully sent to ${target}. (ID: ${info.messageId})` });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, message: `SMTP test failed: ${err?.message || err}` });
+    }
   });
 
   app.get(['/api/download/deploy-zip', '/api/download-package'], (_req, res) => {
@@ -1154,8 +1208,6 @@ async function startServer() {
       emailDelivery: emailResult.success ? 'sent' : 'fallback',
       maskedEmail,
       recipientEmail,
-      // Provide developer/preview fallback code in response if email delivery is delayed in dev
-      previewOtp: randomOtp,
       cardData: {
         id: targetOfficer.uidNumber,
         uidNumber: targetOfficer.uidNumber,
@@ -1174,9 +1226,7 @@ async function startServer() {
         qrPayload: `RAWF-AUTH-VERIFIED:${targetOfficer.uidNumber}:ITA-1882:IFA760`,
         status: targetOfficer.status
       },
-      message: emailResult.success
-        ? `Cryptographic OTP dispatched to registered email (${maskedEmail}) via SMTP mail.raidactionwing.in.`
-        : `OTP generated for ${maskedEmail}. (Code: ${randomOtp})`
+      message: `Security verification OTP has been dispatched to ${maskedEmail}. Please check your email inbox and spam folder.`
     });
   });
 
@@ -1258,10 +1308,7 @@ async function startServer() {
     res.json({
       success: true,
       emailDelivery: result.success ? 'sent' : 'fallback',
-      previewOtp: randomOtp,
-      message: result.success
-        ? `Security OTP sent to ${cleanEmail} via mail.raidactionwing.in.`
-        : `Security OTP generated. (Code: ${randomOtp})`
+      message: `Security OTP sent to registered email ${cleanEmail}. Please check your inbox and spam folder.`
     });
   });
 

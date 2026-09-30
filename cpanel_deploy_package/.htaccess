@@ -56,6 +56,12 @@
   <FilesMatch "\.(html|htm|php)$">
     Header set Cache-Control "no-cache, no-store, must-revalidate"
   </FilesMatch>
+
+  # Exclude dynamic branding assets (logo, broadcast video) from long browser caching
+  <FilesMatch "^(rawf-logo\.(jpg|jpeg|png|svg)|director-broadcast\.mp4)$">
+    Header set Cache-Control "no-cache, must-revalidate, max-age=0"
+    Header set Pragma "no-cache"
+  </FilesMatch>
 </IfModule>
 
 # Media & Static Asset Caching

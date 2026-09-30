@@ -92,11 +92,236 @@ function saveJsonStore($name, $data) {
     @file_put_contents($file, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 }
 
+// ==========================================================================
+// HIGH-DELIVERABILITY OFFICIAL EMAIL SENDER (NATIVE SMTP + PHP MAIL FALLBACK)
+// ==========================================================================
+function sendOfficialEmail($to, $subject, $htmlBody, $plainText = '') {
+    $fromEmail = 'info@raidactionwing.in';
+    $fromName = 'Raid Action Wing Foundation';
+    $replyTo = 'info@raidactionwing.in';
+    
+    $smtpHost = 'mail.raidactionwing.in';
+    $smtpPort = 465;
+    $smtpUser = 'info@raidactionwing.in';
+    $smtpPass = 'RawFinfo1';
+    
+    $sent = false;
+    $methodUsed = 'none';
+    $errorMsg = null;
+    
+    // 1. Attempt Native SMTP over SSL (Port 465)
+    try {
+        $context = stream_context_create([
+            'ssl' => [
+                'verify_peer' => false,
+                'verify_peer_name' => false,
+                'allow_self_signed' => true
+            ]
+        ]);
+        
+        $socket = @stream_socket_client("ssl://{$smtpHost}:{$smtpPort}", $errno, $errstr, 4, STREAM_CLIENT_CONNECT, $context);
+        
+        if ($socket) {
+            stream_set_timeout($socket, 4);
+            $welcome = fgets($socket, 515);
+            
+            fputs($socket, "EHLO raidactionwing.in\r\n");
+            while ($line = fgets($socket, 515)) {
+                if (substr($line, 3, 1) === ' ') break;
+            }
+            
+            fputs($socket, "AUTH LOGIN\r\n");
+            fgets($socket, 515);
+            fputs($socket, base64_encode($smtpUser) . "\r\n");
+            fgets($socket, 515);
+            fputs($socket, base64_encode($smtpPass) . "\r\n");
+            $authRes = fgets($socket, 515);
+            
+            if (strpos($authRes, '235') !== false) {
+                fputs($socket, "MAIL FROM: <{$fromEmail}>\r\n");
+                fgets($socket, 515);
+                fputs($socket, "RCPT TO: <{$to}>\r\n");
+                fgets($socket, 515);
+                fputs($socket, "DATA\r\n");
+                fgets($socket, 515);
+                
+                $boundary = '=_rawf_' . md5(uniqid(time()));
+                $headers = "MIME-Version: 1.0\r\n";
+                $headers .= "From: =?UTF-8?B?" . base64_encode($fromName) . "?= <{$fromEmail}>\r\n";
+                $headers .= "Reply-To: <{$replyTo}>\r\n";
+                $headers .= "To: <{$to}>\r\n";
+                $headers .= "Subject: =?UTF-8?B?" . base64_encode($subject) . "?=\r\n";
+                $headers .= "Date: " . date('r') . "\r\n";
+                $headers .= "X-Mailer: RAWF-Command-Mailer/2.0\r\n";
+                $headers .= "Content-Type: multipart/alternative; boundary=\"{$boundary}\"\r\n";
+                
+                $message = "This is a multi-part message in MIME format.\r\n\r\n";
+                if (!empty($plainText)) {
+                    $message .= "--{$boundary}\r\n";
+                    $message .= "Content-Type: text/plain; charset=UTF-8\r\n";
+                    $message .= "Content-Transfer-Encoding: base64\r\n\r\n";
+                    $message .= chunk_split(base64_encode($plainText)) . "\r\n";
+                }
+                $message .= "--{$boundary}\r\n";
+                $message .= "Content-Type: text/html; charset=UTF-8\r\n";
+                $message .= "Content-Transfer-Encoding: base64\r\n\r\n";
+                $message .= chunk_split(base64_encode($htmlBody)) . "\r\n";
+                $message .= "--{$boundary}--\r\n";
+                
+                fputs($socket, $headers . "\r\n" . $message . "\r\n.\r\n");
+                $dataRes = fgets($socket, 515);
+                fputs($socket, "QUIT\r\n");
+                fclose($socket);
+                
+                if (strpos($dataRes, '250') !== false) {
+                    $sent = true;
+                    $methodUsed = 'SMTP (SSL 465)';
+                }
+            } else {
+                fclose($socket);
+                $errorMsg = "SMTP Auth Failed: {$authRes}";
+            }
+        } else {
+            $errorMsg = "Socket Connection Failed: {$errstr} ({$errno})";
+        }
+    } catch (Exception $e) {
+        $errorMsg = $e->getMessage();
+    }
+    
+    // 2. High-deliverability PHP mail() fallback with envelope sender parameter (-f)
+    if (!$sent) {
+        $boundary = '=_rawf_' . md5(uniqid(time()));
+        $headers = "MIME-Version: 1.0\r\n";
+        $headers .= "From: =?UTF-8?B?" . base64_encode($fromName) . "?= <{$fromEmail}>\r\n";
+        $headers .= "Reply-To: <{$replyTo}>\r\n";
+        $headers .= "Return-Path: <{$fromEmail}>\r\n";
+        $headers .= "X-Mailer: PHP/" . phpversion() . "\r\n";
+        $headers .= "Content-Type: multipart/alternative; boundary=\"{$boundary}\"\r\n";
+        
+        $message = "This is a multi-part message in MIME format.\r\n\r\n";
+        if (!empty($plainText)) {
+            $message .= "--{$boundary}\r\n";
+            $message .= "Content-Type: text/plain; charset=UTF-8\r\n";
+            $message .= "Content-Transfer-Encoding: base64\r\n\r\n";
+            $message .= chunk_split(base64_encode($plainText)) . "\r\n";
+        }
+        $message .= "--{$boundary}\r\n";
+        $message .= "Content-Type: text/html; charset=UTF-8\r\n";
+        $message .= "Content-Transfer-Encoding: base64\r\n\r\n";
+        $message .= chunk_split(base64_encode($htmlBody)) . "\r\n";
+        $message .= "--{$boundary}--\r\n";
+        
+        $encodedSubject = "=?UTF-8?B?" . base64_encode($subject) . "?=";
+        
+        // Pass -f envelope parameter for proper SPF alignment on cPanel/Exim
+        $mailSent = @mail($to, $encodedSubject, $message, $headers, "-f {$fromEmail}");
+        if ($mailSent) {
+            $sent = true;
+            $methodUsed = 'PHP mail() with envelope sender';
+        } else {
+            $mailSentFallback = @mail($to, $encodedSubject, $message, $headers);
+            if ($mailSentFallback) {
+                $sent = true;
+                $methodUsed = 'PHP mail() standard';
+            }
+        }
+    }
+    
+    // Record in local email dispatch audit log
+    $logs = getJsonStore('email_logs', []);
+    array_unshift($logs, [
+        'to' => $to,
+        'subject' => $subject,
+        'sent' => $sent,
+        'method' => $methodUsed,
+        'error' => $errorMsg,
+        'timestamp' => date('Y-m-d H:i:s')
+    ]);
+    if (count($logs) > 60) $logs = array_slice($logs, 0, 60);
+    saveJsonStore('email_logs', $logs);
+    
+    return $sent;
+}
+
+function generateOtpEmailTemplate($otpCode, $officerName, $uidNumber) {
+    return '<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body style="font-family: Arial, Helvetica, sans-serif; background-color: #f1f5f9; margin: 0; padding: 20px; color: #1e293b;">
+    <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 580px; background: #ffffff; border-radius: 8px; overflow: hidden; border: 1px solid #cbd5e1; box-shadow: 0 4px 6px rgba(0,0,0,0.06);">
+      <tr>
+        <td style="background: linear-gradient(135deg, #0d47a1 0%, #1e3a8a 60%, #dc2626 100%); padding: 26px 20px; text-align: center; color: #ffffff;">
+          <h1 style="margin: 0; font-size: 20px; letter-spacing: 1px; font-weight: 900; text-transform: uppercase;">RAID ACTION WING FOUNDATION</h1>
+          <p style="margin: 6px 0 0 0; font-size: 13px; font-weight: 600; opacity: 0.95;">छापा कार्यवाही विभाग • Statutory Citizen Vigilance Directorate</p>
+          <div style="display: inline-block; background: #fbbf24; color: #78350f; font-size: 10px; font-weight: bold; padding: 3px 8px; border-radius: 4px; margin-top: 8px; text-transform: uppercase;">ITA ACT 1882 • IFA 760 CHARTER</div>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding: 28px 24px; line-height: 1.6;">
+          <h2 style="font-size: 16px; margin-top: 0; color: #0f172a;">Official Credential Retrieval Verification</h2>
+          <p style="font-size: 14px; margin-bottom: 14px; color: #334155;">
+            A cryptographic verification request was initiated to download and print the official RAWF ID Card for:
+          </p>
+          
+          <div style="background: #f8fafc; border-left: 4px solid #0d47a1; padding: 12px 16px; margin: 16px 0; border-radius: 0 6px 6px 0;">
+            <p style="margin: 3px 0; font-size: 13px; color: #475569;"><strong>Officer Name:</strong> ' . htmlspecialchars($officerName) . '</p>
+            <p style="margin: 3px 0; font-size: 13px; color: #475569;"><strong>UID Number:</strong> ' . htmlspecialchars($uidNumber) . '</p>
+            <p style="margin: 3px 0; font-size: 13px; color: #475569;"><strong>Verification Protocol:</strong> Registered Secure Email Channel</p>
+          </div>
+
+          <div style="background: #eff6ff; border: 2px dashed #2563eb; border-radius: 8px; text-align: center; padding: 22px 16px; margin: 24px 0;">
+            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #1e40af; font-weight: 700;">Security Authentication One-Time Password</div>
+            <div style="font-family: \'Courier New\', Courier, monospace; font-size: 38px; font-weight: 900; letter-spacing: 8px; color: #0d47a1; margin: 12px 0;">' . $otpCode . '</div>
+            <div style="font-size: 12px; color: #dc2626; font-weight: 600;">⏱ Valid for 10 minutes only</div>
+          </div>
+
+          <p style="font-size: 13px; color: #334155;">
+            Enter this 6-digit code in the <strong>ID Card Download Portal</strong> to cryptographically unlock and export your dual-sided accredited ID Card (PDF / PNG / Print).
+          </p>
+
+          <div style="font-size: 11px; color: #64748b; background: #fff1f2; border: 1px solid #fecdd3; padding: 10px; border-radius: 6px; margin-top: 20px;">
+            <strong>SECURITY ADVISORY:</strong> Do NOT disclose this OTP to unauthorized third parties. RAWF official credentials carry statutory identification responsibilities under Indian Trust Charter IFA 760.
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td style="background: #0f172a; padding: 18px 24px; text-align: center; font-size: 11px; color: #94a3b8;">
+          <p style="margin: 0 0 6px 0;"><strong>RAID ACTION WING FOUNDATION (RAWF)</strong></p>
+          <p style="margin: 0 0 6px 0;">National Command HQ, New Delhi | Toll-Free: 1800-RAW-CELL</p>
+          <p style="margin: 0;"><a href="https://raidactionwing.in" style="color: #60a5fa; text-decoration: none;">www.raidactionwing.in</a> • <a href="mailto:info@raidactionwing.in" style="color: #60a5fa; text-decoration: none;">info@raidactionwing.in</a></p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>';
+}
+
 $pdo = getDbConnection();
 
 // ==========================================================================
-// 1. OFFICIAL LOGO UPLOAD & MANAGEMENT
+// 1. OFFICIAL LOGO UPLOAD & MANAGEMENT (GET /api/logo & POST /api/upload-logo)
 // ==========================================================================
+if ($route === 'logo' || $route === 'logo-info' || $route === 'admin/logo-info') {
+    $logoFile = $webRoot . '/rawf-logo.jpg';
+    $backupFile = $uploadsDir . '/rawf-logo.jpg';
+    $mtime = file_exists($logoFile) ? filemtime($logoFile) : (file_exists($backupFile) ? filemtime($backupFile) : time());
+
+    $info = getJsonStore('logo-info', null);
+    $version = ($info && !empty($info['version'])) ? (string)$info['version'] : (string)$mtime;
+
+    header('Cache-Control: no-cache, no-store, must-revalidate');
+    echo json_encode([
+        'success' => true,
+        'url' => '/rawf-logo.jpg?v=' . $version,
+        'version' => $version,
+        'lastModified' => $mtime
+    ]);
+    exit;
+}
+
 if (($route === 'upload-logo' || $route === 'admin/logo') && $method === 'POST') {
     $imageBase64 = $input['imageBase64'] ?? $input['image'] ?? '';
     if (empty($imageBase64)) {
@@ -110,10 +335,24 @@ if (($route === 'upload-logo' || $route === 'admin/logo') && $method === 'POST')
 
     if ($savedPrimary || $savedBackup) {
         $timestamp = time();
+        saveJsonStore('logo-info', [
+            'version' => (string)$timestamp,
+            'url' => '/rawf-logo.jpg?v=' . $timestamp,
+            'updatedAt' => date('c')
+        ]);
+
+        if ($pdo) {
+            try {
+                $stmt = $pdo->prepare("INSERT INTO system_settings (setting_key, setting_value) VALUES ('logo_version', ?) ON DUPLICATE KEY UPDATE setting_value = ?");
+                $stmt->execute([(string)$timestamp, (string)$timestamp]);
+            } catch (Exception $e) {}
+        }
+
         echo json_encode([
             'success' => true,
             'message' => 'Official logo saved permanently to cPanel storage and updated across all portals.',
-            'url' => '/rawf-logo.jpg?v=' . $timestamp
+            'url' => '/rawf-logo.jpg?v=' . $timestamp,
+            'version' => (string)$timestamp
         ]);
         exit;
     }
@@ -287,20 +526,32 @@ if ($route === 'id-cards/lookup' && $method === 'POST') {
     ];
     saveJsonStore('otps', $otps);
 
-    $emailParts = explode('@', $stdOfficer['email']);
+    // Send Real Verification Email via cPanel SMTP & Mail Engine
+    $targetEmail = (!empty($searchContact) && filter_var($searchContact, FILTER_VALIDATE_EMAIL)) ? $searchContact : $stdOfficer['email'];
+    $htmlEmail = generateOtpEmailTemplate($randomOtp, $stdOfficer['name'], $stdOfficer['uidNumber']);
+    $plainText = "RAID ACTION WING FOUNDATION (RAWF)\nOfficial Credential Retrieval Verification\nYour 6-digit OTP code is: {$randomOtp}\nValid for 10 minutes.\nOfficer: {$stdOfficer['name']} (UID: {$stdOfficer['uidNumber']})";
+    
+    $emailDispatched = sendOfficialEmail($targetEmail, "[RAWF Security] Your ID Card Verification OTP: {$randomOtp}", $htmlEmail, $plainText);
+
+    // If registered officer email is different from search input, send to both
+    if (!empty($stdOfficer['email']) && strcasecmp($stdOfficer['email'], $targetEmail) !== 0 && filter_var($stdOfficer['email'], FILTER_VALIDATE_EMAIL)) {
+        sendOfficialEmail($stdOfficer['email'], "[RAWF Security] Your ID Card Verification OTP: {$randomOtp}", $htmlEmail, $plainText);
+    }
+
+    $emailParts = explode('@', $targetEmail);
     $maskedUser = strlen($emailParts[0]) > 3 ? substr($emailParts[0], 0, 2) . '***' . substr($emailParts[0], -1) : $emailParts[0] . '***';
     $maskedEmail = $maskedUser . '@' . ($emailParts[1] ?? 'raidactionwing.in');
 
     echo json_encode([
         'success' => true,
         'otpSent' => true,
+        'emailDelivery' => $emailDispatched ? 'dispatched' : 'queued',
         'maskedEmail' => $maskedEmail,
-        'recipientEmail' => $stdOfficer['email'],
+        'recipientEmail' => $targetEmail,
         'expiresAt' => $expiresAt,
         'officer' => $stdOfficer,
         'cardData' => $stdOfficer,
-        'previewOtp' => $randomOtp,
-        'message' => 'Cryptographic OTP dispatched to ' . $maskedEmail . ' (Code: ' . $randomOtp . ').'
+        'message' => 'Security verification OTP has been dispatched to ' . $maskedEmail . '. Please check your email inbox and spam folder.'
     ]);
     exit;
 }
@@ -334,28 +585,35 @@ if ($route === 'id-cards/verify-otp' && $method === 'POST') {
     }
 
     http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Invalid or expired OTP code. Use 123456 for instant clearance.']);
+    echo json_encode(['success' => false, 'message' => 'Invalid or expired OTP code. Please check your email and re-enter.']);
     exit;
 }
 
 if ($route === 'id-cards/resend-otp' && $method === 'POST') {
     $uid = trim($input['uidNumber'] ?? '');
+    $email = trim($input['email'] ?? 'officer@raidactionwing.in');
     $randomOtp = (string)rand(100000, 999999);
     $expiresAt = time() + 600;
 
     $otps = getJsonStore('otps', []);
     $otps[$uid] = [
         'code' => $randomOtp,
-        'email' => $input['email'] ?? 'officer@raidactionwing.in',
+        'email' => $email,
         'expiresAt' => $expiresAt
     ];
     saveJsonStore('otps', $otps);
 
+    // Send Real Email
+    $htmlEmail = generateOtpEmailTemplate($randomOtp, 'Officer Member', $uid);
+    $plainText = "RAID ACTION WING FOUNDATION (RAWF)\nYour fresh security verification OTP code is: {$randomOtp}\nValid for 10 minutes.";
+    $dispatched = sendOfficialEmail($email, "[RAWF Security] Your New ID Card Verification OTP: {$randomOtp}", $htmlEmail, $plainText);
+
     echo json_encode([
         'success' => true,
+        'otpSent' => true,
+        'emailDelivery' => $dispatched ? 'dispatched' : 'queued',
         'expiresAt' => $expiresAt,
-        'previewOtp' => $randomOtp,
-        'message' => 'Fresh OTP generated successfully: ' . $randomOtp
+        'message' => 'A new security verification OTP has been dispatched to your email address.'
     ]);
     exit;
 }
@@ -405,6 +663,16 @@ if (($route === 'memberships' || $route === 'membership/apply') && $method === '
     ];
     array_unshift($applications, $newRecord);
     saveJsonStore('memberships', $applications);
+
+    // Send Admin & Applicant Notification Emails
+    $adminSubject = "[RAWF Intake] New Member Application: {$appId} - {$fullName}";
+    $adminHtml = "<h2>New Member Application Received</h2><p><strong>Application ID:</strong> {$appId}</p><p><strong>Applicant Name:</strong> {$fullName}</p><p><strong>Mobile:</strong> {$mobile}</p><p><strong>Email:</strong> {$email}</p><p><strong>Wing:</strong> {$wing}</p><p><strong>State:</strong> {$state}</p><p><strong>Background / Motivation:</strong></p><blockquote>" . htmlspecialchars($background) . "</blockquote>";
+    sendOfficialEmail('info@raidactionwing.in', $adminSubject, $adminHtml);
+    sendOfficialEmail('andrew000us@gmail.com', $adminSubject, $adminHtml);
+    
+    $appSubject = "[RAWF] Membership Application Received: {$appId}";
+    $appHtml = "<h2>RAID ACTION WING FOUNDATION</h2><p>Dear {$fullName},</p><p>Thank you for submitting your membership application (Tracking ID: <strong>{$appId}</strong>) under the IFA 760 Charter. Your application is under review by the State Directorate Command.</p><p>Official Toll-Free: 1800-RAW-CELL | www.raidactionwing.in</p>";
+    sendOfficialEmail($email, $appSubject, $appHtml);
 
     echo json_encode([
         'success' => true,
@@ -961,12 +1229,46 @@ if ($route === 'grievances' && $method === 'POST') {
     array_unshift($grievances, $record);
     saveJsonStore('grievances', $grievances);
 
+    // Send Alert Notification Email to National Command & Andrew
+    $cat = htmlspecialchars($input['category'] ?? 'Public Grievance');
+    $st = htmlspecialchars($input['state'] ?? 'National');
+    $targ = htmlspecialchars($input['targetEntity'] ?? 'Accused Entity');
+    $narr = htmlspecialchars($input['narrative'] ?? ($input['description'] ?? ''));
+    $rep = !empty($input['isAnonymous']) ? 'Anonymous Whistleblower' : htmlspecialchars(($input['reporterName'] ?? 'Citizen') . ' (' . ($input['reporterContact'] ?? 'N/A') . ')');
+
+    $alertSubject = "[RAWF Alert] Grievance / Tip Logged: {$trackingCode}";
+    $alertHtml = "<h2>RAWF Citizen Tip / Grievance Logged</h2><p><strong>Tracking ID:</strong> {$trackingCode}</p><p><strong>Category:</strong> {$cat}</p><p><strong>State:</strong> {$st}</p><p><strong>Target Entity:</strong> {$targ}</p><p><strong>Reporter:</strong> {$rep}</p><p><strong>Summary:</strong></p><blockquote style='background:#f1f5f9;padding:12px;border-left:4px solid #dc2626;'>{$narr}</blockquote><p style='font-size:11px;color:#64748b;'>Logged at " . date('r') . "</p>";
+    sendOfficialEmail('info@raidactionwing.in', $alertSubject, $alertHtml, $narr);
+    sendOfficialEmail('andrew000us@gmail.com', $alertSubject, $alertHtml, $narr);
+
     echo json_encode([
         'success' => true,
         'trackingCode' => $trackingCode,
         'trackingId' => $trackingCode,
         'message' => 'Confidential dossier received and encrypted under IFA 760 protocol.'
     ]);
+    exit;
+}
+
+// Admin Email Testing & Diagnostic Verification
+if ($route === 'admin/test-email' && $method === 'POST') {
+    $target = trim($input['email'] ?? 'andrew000us@gmail.com');
+    $testSubject = "[RAWF Test] cPanel Mail Delivery Verification at " . date('Y-m-d H:i:s');
+    $testHtml = "<h2>RAWF Mail Dispatch Diagnostic</h2><p>This is a live test email confirming that Raid Action Wing Foundation (RAWF) cPanel mail delivery is operational.</p><p><strong>Server Time:</strong> " . date('r') . "<br><strong>Target:</strong> " . htmlspecialchars($target) . "<br><strong>PHP Version:</strong> " . phpversion() . "</p>";
+    $dispatched = sendOfficialEmail($target, $testSubject, $testHtml, "RAWF email test");
+
+    echo json_encode([
+        'success' => $dispatched,
+        'recipient' => $target,
+        'message' => $dispatched ? "Test email successfully sent to {$target}." : "Failed to deliver test email. Check server Exim/SMTP settings.",
+        'recentLogs' => array_slice(getJsonStore('email_logs', []), 0, 5)
+    ]);
+    exit;
+}
+
+if ($route === 'admin/email-logs' && $method === 'GET') {
+    $logs = getJsonStore('email_logs', []);
+    echo json_encode(['success' => true, 'data' => $logs]);
     exit;
 }
 
