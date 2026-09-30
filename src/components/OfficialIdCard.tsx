@@ -37,15 +37,13 @@ export const OfficialIdCard: React.FC<OfficialIdCardProps> = ({
   idPrefix = ''
 }) => {
   // Normalize fields to match template exactly
-  const uid = cardData.uidNumber || cardData.badgeNumber || 'RAWF/2026/1995';
-  const name = cardData.name || 'Akshay Vilas Patil';
-  const dob = toStandardDisplayDate(cardData.dob) || '20/12/1995';
-  const designation = cardData.designation || 'District Special Officer';
-  const state = cardData.state || 'Maharashtra';
+  const uid = cardData.uidNumber || cardData.badgeNumber || cardData.id || 'RAWF/2026/1376';
+  const name = cardData.name || 'Officer Personnel';
+  const dob = toStandardDisplayDate(cardData.dob) || cardData.dob || '20/12/1995';
+  const designation = cardData.designation || 'Field Officer';
+  const state = cardData.state || cardData.division || 'National';
   const expiryDate = toStandardDisplayDate(cardData.expiryDate || cardData.validTill) || '11/09/2027';
-  const photoUrl =
-    cardData.photoUrl ||
-    'https://lh3.googleusercontent.com/aida-public/AB6AXuDUm1YEgLpksGzi3w_3gvQPMzQHxeJlPGIDPYSLpaJCRKoYNLLGbcUdrCUKoSaRyfEzL4ATnteKP2TfyzfoAVh1i5Kpa_VmIijrnduQpaY8f3zG3WoGPNJrVYlAkNW10Af4Sgz53Lwkm1nL1Xp2RSJO1N4pId9Ml-OLibxjnYl8ahmBmrReo3ewBqIGmPn5k_MsnyohwJdt7FnnDgVW2dEYGojLicyUTmbxn8Iv-d5fNMODD99vAKO6VQ';
+  const photoUrl = cardData.photoUrl && cardData.photoUrl !== '/rawf-logo.jpg' ? cardData.photoUrl : '';
 
   // Determine whether to display front / back
   const shouldShowFront = side === 'both' ? showBothSides : side === 'front';
@@ -112,17 +110,34 @@ export const OfficialIdCard: React.FC<OfficialIdCardProps> = ({
               <div className="flex gap-3.5 items-start">
                 {/* Photo Box (Height 154px to fill bottom gap down towards barcode) */}
                 <div className="w-[108px] shrink-0 flex flex-col items-center">
-                  <div className="w-[108px] h-[154px] bg-slate-100 border border-[#333333] overflow-hidden flex items-center justify-center shadow-2xs" data-nosnippet>
-                    <img
-                      src={photoUrl}
-                      alt="RAWF ID Card Personnel"
-                      data-nosnippet
-                      className="w-full h-full object-cover object-center select-none"
-                      onContextMenu={(e) => e.preventDefault()}
-                      onError={(e) => {
-                        (e.currentTarget as HTMLImageElement).src = '/rawf-logo.jpg';
-                      }}
-                    />
+                  <div className="w-[108px] h-[154px] bg-slate-50 border border-[#333333] overflow-hidden flex items-center justify-center shadow-2xs relative" data-nosnippet>
+                    {photoUrl ? (
+                      <img
+                        src={photoUrl}
+                        alt={`RAWF ID Card Officer ${name}`}
+                        data-nosnippet
+                        className="w-full h-full object-cover object-center select-none"
+                        onContextMenu={(e) => e.preventDefault()}
+                        onError={(e) => {
+                          const target = e.currentTarget as HTMLImageElement;
+                          target.style.display = 'none';
+                          const fallback = target.parentElement?.querySelector('[data-photo-fallback]');
+                          if (fallback) (fallback as HTMLElement).style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    <div
+                      data-photo-fallback="true"
+                      style={{ display: photoUrl ? 'none' : 'flex' }}
+                      className="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-slate-400 p-2 text-center"
+                    >
+                      <span className="material-symbols-outlined text-[44px] text-slate-400 notranslate select-none" translate="no">
+                        person
+                      </span>
+                      <span className="text-[8.5px] font-mono uppercase font-bold text-slate-500 mt-1 select-none leading-tight">
+                        OFFICER PHOTO
+                      </span>
+                    </div>
                   </div>
                 </div>
 

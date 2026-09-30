@@ -21,21 +21,46 @@ export const IdCardDownloadPortal: React.FC = () => {
     message: ''
   });
 
-  const [cardData, setCardData] = useState<OfficialIdCardData>({
-    uidNumber: 'RAWF/2026/1995',
-    badgeNumber: 'RAWF/2026/1995',
-    name: 'Akshay Vilas Patil',
-    dob: '20/12/1995',
-    designation: 'District Special Officer',
-    state: 'Maharashtra',
-    division: 'state',
-    validTill: '11-09-2027',
-    expiryDate: '11-09-2027',
-    joinDate: '11-SEP-2024',
-    email: 'akshay.patil@raidactionwing.in',
-    phoneContact: '+91 98200 45678',
-    photoUrl:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuDUm1YEgLpksGzi3w_3gvQPMzQHxeJlPGIDPYSLpaJCRKoYNLLGbcUdrCUKoSaRyfEzL4ATnteKP2TfyzfoAVh1i5Kpa_VmIijrnduQpaY8f3zG3WoGPNJrVYlAkNW10Af4Sgz53Lwkm1nL1Xp2RSJO1N4pId9Ml-OLibxjnYl8ahmBmrReo3ewBqIGmPn5k_MsnyohwJdt7FnnDgVW2dEYGojLicyUTmbxn8Iv-d5fNMODD99vAKO6VQ'
+  const [cardData, setCardData] = useState<OfficialIdCardData>(() => {
+    try {
+      const savedOfficers = localStorage.getItem('rawf_data_officers');
+      if (savedOfficers) {
+        const list = JSON.parse(savedOfficers);
+        if (Array.isArray(list) && list.length > 0) {
+          const first = list[0];
+          return {
+            uidNumber: first.uidNumber || first.badgeNumber || first.id || 'RAWF/2026/1376',
+            badgeNumber: first.badgeNumber || first.uidNumber || first.id || 'RAWF/2026/1376',
+            name: first.name || first.fullName || 'Officer Member',
+            dob: first.dob || '20/12/1995',
+            designation: first.designation || 'Special Officer',
+            state: first.state || 'National',
+            division: first.division || 'state',
+            validTill: first.validTill || first.expiryDate || '11/09/2027',
+            expiryDate: first.expiryDate || first.validTill || '11/09/2027',
+            joinDate: first.joinDate || '11-SEP-2024',
+            email: first.email || '',
+            phoneContact: first.phoneContact || '',
+            photoUrl: first.photoUrl || ''
+          };
+        }
+      }
+    } catch {}
+    return {
+      uidNumber: 'RAWF/2026/1376',
+      badgeNumber: 'RAWF/2026/1376',
+      name: 'Andrew Paul',
+      dob: '20/12/1995',
+      designation: 'District Special Officer',
+      state: 'Tamil Nadu',
+      division: 'state',
+      validTill: '11/09/2027',
+      expiryDate: '11/09/2027',
+      joinDate: '11-SEP-2024',
+      email: 'andrew000us@gmail.com',
+      phoneContact: '+91 98200 45678',
+      photoUrl: ''
+    };
   });
 
   const [isReadyToDownload, setIsReadyToDownload] = useState(false);
@@ -46,14 +71,35 @@ export const IdCardDownloadPortal: React.FC = () => {
 
   const handleLookupAndGenerateOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!uidInput.trim()) {
+    const cleanUid = uidInput.trim().toUpperCase();
+    const cleanEmail = emailInput.trim().toLowerCase();
+
+    if (!cleanUid) {
       setFeedback({ type: 'error', message: 'Please enter your registered UID Number.' });
       return;
     }
-    if (!emailInput.trim()) {
+    if (!cleanEmail) {
       setFeedback({ type: 'error', message: 'Please enter your registered Email ID.' });
       return;
     }
+
+    // 1. Check local storage active roster for instant match and photo preservation
+    let localOfficer: any = null;
+    try {
+      const savedOfficers = localStorage.getItem('rawf_data_officers');
+      if (savedOfficers) {
+        const list = JSON.parse(savedOfficers);
+        if (Array.isArray(list)) {
+          localOfficer = list.find((o: any) => {
+            const u = String(o.uidNumber || o.badgeNumber || o.id || '').trim().toUpperCase();
+            const em = String(o.email || '').trim().toLowerCase();
+            const matchUid = u === cleanUid || u.replace(/\//g, '-') === cleanUid.replace(/\//g, '-');
+            const matchEmail = em === cleanEmail || cleanEmail.includes(em) || em.includes(cleanEmail);
+            return matchUid || (matchEmail && cleanUid.length >= 6);
+          });
+        }
+      }
+    } catch {}
 
     setLoading(true);
     setFeedback({ type: 'idle', message: '' });
@@ -61,14 +107,28 @@ export const IdCardDownloadPortal: React.FC = () => {
       const res = await fetch('/api/id-cards/lookup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uidNumber: uidInput.trim(), email: emailInput.trim() })
+        body: JSON.stringify({
+          uidNumber: cleanUid,
+          email: cleanEmail,
+          officerData: localOfficer || undefined
+        })
       });
       const data = await res.json();
 
       if (data.success && data.cardData) {
-        setCardData(data.cardData);
+        // Merge verified server data with local officer data (photoUrl, name, jurisdiction)
+        const resolvedOfficer = {
+          ...data.cardData,
+          ...(localOfficer || {}),
+          name: (localOfficer?.name || data.cardData.name || '').trim(),
+          uidNumber: localOfficer?.uidNumber || data.cardData.uidNumber || cleanUid,
+          state: localOfficer?.state || data.cardData.state || 'National',
+          designation: localOfficer?.designation || data.cardData.designation || 'Field Officer',
+          photoUrl: localOfficer?.photoUrl || data.cardData.photoUrl || ''
+        };
+        setCardData(resolvedOfficer);
         setOtpStep(true);
-        const emailToShow = data.maskedEmail || emailInput;
+        const emailToShow = data.maskedEmail || cleanEmail;
         setMaskedEmail(emailToShow);
         setFeedback({
           type: 'success',
@@ -81,11 +141,21 @@ export const IdCardDownloadPortal: React.FC = () => {
         });
       }
     } catch {
+      if (localOfficer) {
+        setCardData({
+          ...localOfficer,
+          name: localOfficer.name || 'Officer',
+          uidNumber: localOfficer.uidNumber || cleanUid,
+          state: localOfficer.state || 'National',
+          designation: localOfficer.designation || 'Field Officer',
+          photoUrl: localOfficer.photoUrl || ''
+        });
+      }
       setOtpStep(true);
-      setMaskedEmail(emailInput);
+      setMaskedEmail(cleanEmail);
       setFeedback({
         type: 'success',
-        message: `✓ Security verification OTP has been dispatched to ${emailInput}. Please check your email inbox and enter the 6-digit code below.`
+        message: `✓ Security verification OTP has been dispatched to ${cleanEmail}. Please check your email inbox and enter the 6-digit code below.`
       });
     } finally {
       setLoading(false);
@@ -112,6 +182,13 @@ export const IdCardDownloadPortal: React.FC = () => {
       const data = await res.json();
 
       if (data.success && data.verified) {
+        if (data.cardData || data.officer) {
+          setCardData((prev) => ({
+            ...prev,
+            ...(data.cardData || data.officer),
+            photoUrl: prev.photoUrl || data.cardData?.photoUrl || data.officer?.photoUrl || ''
+          }));
+        }
         setIsReadyToDownload(true);
         setFeedback({
           type: 'success',

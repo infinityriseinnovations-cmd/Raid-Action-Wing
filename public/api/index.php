@@ -457,37 +457,33 @@ if ($route === 'id-cards/lookup' && $method === 'POST') {
         }
     }
 
-    // Default Fallback template if valid UID pattern
-    if (!$officer && (stripos($uidNumber, 'RAWF') === 0 || stripos($uidNumber, 'RW-') === 0 || strlen($uidNumber) >= 6)) {
-        $officer = [
-            'id' => $uidNumber,
-            'uid_number' => $uidNumber,
-            'uidNumber' => $uidNumber,
-            'badge_number' => $uidNumber,
-            'badgeNumber' => $uidNumber,
-            'name' => 'Akshay Vilas Patil',
-            'full_name' => 'Akshay Vilas Patil',
-            'designation' => 'District Special Officer',
-            'state' => 'Maharashtra',
-            'gender' => 'Male',
-            'dob' => '1995-12-20',
-            'join_date' => '2024-09-11',
-            'valid_till' => '11-09-2027',
-            'phone_contact' => '+91 98200 45678',
-            'email' => $searchContact ?: 'akshay.patil@raidactionwing.in',
-            'status' => 'ACTIVE',
-            'mandate' => 'District Vigilance & Field Taskforce Enforcement',
-            'photo_url' => '/rawf-logo.jpg'
-        ];
+    // If client supplied verified officer data (e.g. from session or Admin Console)
+    if (!$officer && !empty($input['officerData'])) {
+        $clientOff = $input['officerData'];
+        if (!empty($clientOff['uidNumber']) || !empty($clientOff['name'])) {
+            $officer = $clientOff;
+            // Persist to server JSON store
+            $allOfficers = getJsonStore('officers', []);
+            $found = false;
+            foreach ($allOfficers as &$ao) {
+                if (strcasecmp($ao['uidNumber'] ?? '', $clientOff['uidNumber'] ?? '') === 0) {
+                    $ao = array_merge($ao, $clientOff);
+                    $found = true;
+                    break;
+                }
+            }
+            if (!$found) array_unshift($allOfficers, $clientOff);
+            saveJsonStore('officers', $allOfficers);
+        }
     }
 
     if (!$officer) {
         http_response_code(404);
-        echo json_encode(['success' => false, 'message' => 'Officer record not found in active directory.']);
+        echo json_encode(['success' => false, 'message' => 'Officer credential not found in active directory. Please verify UID Number and registered Email ID.']);
         exit;
     }
 
-    // Standardize officer fields
+    // Standardize officer fields (preserve real photo, name, jurisdiction, designation)
     $stdOfficer = [
         'id' => $officer['id'] ?? $officer['uid_number'] ?? $officer['uidNumber'],
         'uidNumber' => $officer['uid_number'] ?? $officer['uidNumber'] ?? $officer['id'],
@@ -499,7 +495,7 @@ if ($route === 'id-cards/lookup' && $method === 'POST') {
         'division' => $officer['division'] ?? 'state',
         'validTill' => $officer['valid_till'] ?? $officer['validTill'] ?? '11-09-2027',
         'joinDate' => $officer['join_date'] ?? $officer['joinDate'] ?? '2024-09-11',
-        'email' => $officer['email'] ?? 'officer@raidactionwing.in',
+        'email' => !empty($officer['email']) ? $officer['email'] : ($searchContact ?: 'officer@raidactionwing.in'),
         'phoneContact' => $officer['phone_contact'] ?? $officer['phoneContact'] ?? '',
         'photoUrl' => $officer['photo_url'] ?? $officer['photoUrl'] ?? '',
         'status' => $officer['status'] ?? 'ACTIVE',
@@ -922,10 +918,16 @@ if ($route === 'blacklist' && $method === 'GET') {
 // 7. ADMIN OFFICERS CRUD & PHOTO DISK PERSISTENCE
 // ==========================================================================
 if ($routeParts[0] === 'admin' && isset($routeParts[1]) && $routeParts[1] === 'officers') {
-    $subId = $routeParts[2] ?? null;
-    $subAction = $routeParts[3] ?? null;
+    $remaining = isset($routeParts[2]) ? implode('/', array_slice($routeParts, 2)) : '';
+    $isBlacklist = false;
+    if (preg_match('#^(.*?)/blacklist$#i', $remaining, $bm)) {
+        $subId = $bm[1];
+        $isBlacklist = true;
+    } else {
+        $subId = $remaining ?: ($input['uidNumber'] ?? $input['id'] ?? null);
+    }
 
-    if ($method === 'GET' && !$subId) {
+    if ($method === 'GET' && empty($subId)) {
         $officers = [];
         if ($pdo) {
             try {
@@ -940,7 +942,7 @@ if ($routeParts[0] === 'admin' && isset($routeParts[1]) && $routeParts[1] === 'o
         exit;
     }
 
-    if ($method === 'POST' && !$subId) {
+    if ($method === 'POST' && empty($subId) && !$isBlacklist) {
         $uid = $input['uidNumber'] ?? $input['badgeNumber'] ?? ('RAWF/2026/' . rand(1000, 9999));
         $name = $input['name'] ?? $input['fullName'] ?? 'Officer';
         $desig = $input['designation'] ?? 'Field Officer';
@@ -986,46 +988,64 @@ if ($routeParts[0] === 'admin' && isset($routeParts[1]) && $routeParts[1] === 'o
 
         if ($pdo) {
             try {
-                $stmt = $pdo->prepare("INSERT INTO officers (id, uid_number, badge_number, name, designation, division, state, gender, dob, join_date, valid_till, phone_contact, email, photo_url, mandate, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE')");
-                $stmt->execute([$uid, $uid, $uid, $name, $desig, $division, $state, $gender, $dob, $joinDate, $validTill, $phone, $email, $photoUrl, $mandate]);
+                $stmt = $pdo->prepare("INSERT INTO officers (id, uid_number, badge_number, name, designation, division, state, gender, dob, join_date, valid_till, phone_contact, email, photo_url, mandate, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE') ON DUPLICATE KEY UPDATE name=?, designation=?, state=?, phone_contact=?, email=?, photo_url=?, valid_till=?, mandate=?");
+                $stmt->execute([$uid, $uid, $uid, $name, $desig, $division, $state, $gender, $dob, $joinDate, $validTill, $phone, $email, $photoUrl, $mandate, $name, $desig, $state, $phone, $email, $photoUrl, $validTill, $mandate]);
             } catch (Exception $e) {}
         }
 
         $allOfficers = getJsonStore('officers', []);
-        array_unshift($allOfficers, $officerRecord);
+        $found = false;
+        foreach ($allOfficers as &$ao) {
+            if (strcasecmp($ao['uidNumber'] ?? '', $uid) === 0 || strcasecmp($ao['id'] ?? '', $uid) === 0) {
+                $ao = array_merge($ao, $officerRecord);
+                $found = true;
+                break;
+            }
+        }
+        if (!$found) array_unshift($allOfficers, $officerRecord);
         saveJsonStore('officers', $allOfficers);
 
         echo json_encode(['success' => true, 'message' => 'Officer record registered successfully.', 'data' => $officerRecord]);
         exit;
     }
 
-    if ($method === 'PUT' && $subId) {
+    if ($method === 'PUT') {
+        $targetUid = $input['uidNumber'] ?? $input['badgeNumber'] ?? $input['id'] ?? $subId;
         $photoUrl = $input['photoUrl'] ?? '';
         if (strpos($photoUrl, 'data:image') === 0) {
-            $safeUid = preg_replace('/[^a-zA-Z0-9_-]/', '_', $input['uidNumber'] ?? $subId);
+            $safeUid = preg_replace('/[^a-zA-Z0-9_-]/', '_', $targetUid);
             $photoPath = $officersDir . '/' . $safeUid . '.jpg';
             if (saveBase64File($photoUrl, $photoPath)) {
-                $input['photoUrl'] = '/uploads/officers/' . $safeUid . '.jpg?v=' . time();
+                $photoUrl = '/uploads/officers/' . $safeUid . '.jpg?v=' . time();
+                $input['photoUrl'] = $photoUrl;
             }
         }
 
         if ($pdo) {
             try {
-                $stmt = $pdo->prepare("UPDATE officers SET name = ?, designation = ?, state = ?, phone_contact = ?, email = ?, photo_url = ?, valid_till = ?, mandate = ? WHERE id = ? OR uid_number = ?");
-                $stmt->execute([$input['name'] ?? '', $input['designation'] ?? '', $input['state'] ?? '', $input['phoneContact'] ?? '', $input['email'] ?? '', $input['photoUrl'] ?? '', $input['validTill'] ?? '', $input['mandate'] ?? '', $subId, $subId]);
+                $stmt = $pdo->prepare("UPDATE officers SET name = ?, designation = ?, state = ?, phone_contact = ?, email = ?, photo_url = ?, valid_till = ?, mandate = ? WHERE id = ? OR uid_number = ? OR badge_number = ?");
+                $stmt->execute([$input['name'] ?? '', $input['designation'] ?? '', $input['state'] ?? '', $input['phoneContact'] ?? '', $input['email'] ?? '', $photoUrl, $input['validTill'] ?? '', $input['mandate'] ?? '', $targetUid, $targetUid, $targetUid]);
             } catch (Exception $e) {}
         }
 
         $allOfficers = getJsonStore('officers', []);
+        $found = false;
         foreach ($allOfficers as &$off) {
-            if ($off['id'] == $subId || ($off['uidNumber'] ?? '') == $subId) {
+            if (strcasecmp($off['id'] ?? '', $targetUid) === 0 || strcasecmp($off['uidNumber'] ?? '', $targetUid) === 0 || strcasecmp($off['badgeNumber'] ?? '', $targetUid) === 0) {
                 $off = array_merge($off, $input);
+                if (!empty($photoUrl)) $off['photoUrl'] = $photoUrl;
+                $found = true;
                 break;
             }
         }
+        if (!$found) {
+            $newEntry = array_merge(['id' => $targetUid, 'uidNumber' => $targetUid, 'badgeNumber' => $targetUid], $input);
+            if (!empty($photoUrl)) $newEntry['photoUrl'] = $photoUrl;
+            array_unshift($allOfficers, $newEntry);
+        }
         saveJsonStore('officers', $allOfficers);
 
-        echo json_encode(['success' => true, 'message' => 'Officer updated successfully.']);
+        echo json_encode(['success' => true, 'message' => 'Officer updated successfully.', 'data' => $input]);
         exit;
     }
 

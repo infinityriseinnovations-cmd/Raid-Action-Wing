@@ -464,7 +464,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
     setEditingOfficer(null);
 
     try {
-      await fetch(`/api/admin/officers/${encodeURIComponent(editingOfficer.id)}`, {
+      await fetch('/api/admin/officers', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

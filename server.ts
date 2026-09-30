@@ -1658,14 +1658,14 @@ async function startServer() {
       return res.status(400).json({ success: false, message: 'Officer Name and Designation are required.' });
     }
 
-    const assignedUid = String(uidNumber || badgeNumber || `RAWF/2026/${Math.floor(1000 + Math.random() * 9000)}`).trim().toUpperCase();
+    const assignedUid = String(uidNumber || badgeNumber || req.body.id || `RAWF/2026/${Math.floor(1000 + Math.random() * 9000)}`).trim().toUpperCase();
 
-    // Check duplicate
-    if (officersDatabase.some((o) => o.uidNumber.toUpperCase() === assignedUid || o.badgeNumber.toUpperCase() === assignedUid)) {
-      return res.status(400).json({ success: false, message: `UID Number ${assignedUid} already exists in active roster.` });
-    }
+    // Upsert if officer already exists
+    const existingIndex = officersDatabase.findIndex(
+      (o) => o.uidNumber.toUpperCase() === assignedUid || o.badgeNumber.toUpperCase() === assignedUid || o.id.toUpperCase() === assignedUid
+    );
 
-    const newOfficer: Officer = {
+    const officerObj: Officer = {
       id: assignedUid,
       uidNumber: assignedUid,
       badgeNumber: assignedUid,
@@ -1683,56 +1683,77 @@ async function startServer() {
       mandate: mandate || 'Citizen Vigilance & Constitutional Rights Protection'
     };
 
-    officersDatabase.push(newOfficer);
+    if (existingIndex !== -1) {
+      officersDatabase[existingIndex] = { ...officersDatabase[existingIndex], ...officerObj };
+    } else {
+      officersDatabase.unshift(officerObj);
+    }
+
+    try {
+      const offFilePath = path.join(process.cwd(), 'public', 'uploads', 'officers.json');
+      fs.mkdirSync(path.dirname(offFilePath), { recursive: true });
+      fs.writeFileSync(offFilePath, JSON.stringify(officersDatabase, null, 2));
+    } catch {}
+
     res.json({
       success: true,
-      message: `Officer ${newOfficer.name} (UID: ${assignedUid}) appointed and ID Card generated!`,
-      data: newOfficer
+      message: `Officer ${officerObj.name} (UID: ${assignedUid}) updated successfully!`,
+      data: officerObj
     });
   });
 
-  app.put('/api/admin/officers/:id', requireAdminAuth, (req, res) => {
-    const { id } = req.params;
-    const cleanId = id.trim().toUpperCase();
+  app.put(['/api/admin/officers', '/api/admin/officers/*'], requireAdminAuth, (req, res) => {
+    const rawParam = req.params[0] || req.params.id || '';
+    const cleanId = String(req.body.uidNumber || req.body.badgeNumber || req.body.id || rawParam).trim().toUpperCase();
     const index = officersDatabase.findIndex(
       (o) => o.id.toUpperCase() === cleanId || o.uidNumber.toUpperCase() === cleanId || o.badgeNumber.toUpperCase() === cleanId
     );
 
-    if (index === -1) {
-      return res.status(404).json({ success: false, message: 'Officer not found.' });
-    }
-
-    const existing = officersDatabase[index];
-    const incomingUid = req.body.uidNumber || req.body.badgeNumber || existing.uidNumber;
-
+    const incomingUid = req.body.uidNumber || req.body.badgeNumber || cleanId;
     const updated: Officer = {
-      ...existing,
+      ...(index !== -1 ? officersDatabase[index] : {}),
       ...req.body,
       id: incomingUid,
       uidNumber: incomingUid,
-      badgeNumber: incomingUid
+      badgeNumber: incomingUid,
+      name: req.body.name || req.body.fullName || (index !== -1 ? officersDatabase[index].name : 'Officer')
     };
 
-    officersDatabase[index] = updated;
+    if (index !== -1) {
+      officersDatabase[index] = updated;
+    } else {
+      officersDatabase.unshift(updated);
+    }
+
+    try {
+      const offFilePath = path.join(process.cwd(), 'public', 'uploads', 'officers.json');
+      fs.mkdirSync(path.dirname(offFilePath), { recursive: true });
+      fs.writeFileSync(offFilePath, JSON.stringify(officersDatabase, null, 2));
+    } catch {}
+
     res.json({ success: true, message: 'Officer credentials updated successfully.', data: updated });
   });
 
-  app.delete('/api/admin/officers/:id', requireAdminAuth, (req, res) => {
-    const { id } = req.params;
-    const cleanId = id.trim().toUpperCase();
-    const index = officersDatabase.findIndex((o) => o.id.toUpperCase() === cleanId || o.badgeNumber.toUpperCase() === cleanId);
+  app.delete(['/api/admin/officers', '/api/admin/officers/*'], requireAdminAuth, (req, res) => {
+    const rawParam = req.params[0] || req.params.id || '';
+    const cleanId = String(req.body.uidNumber || req.body.badgeNumber || req.query.uid || rawParam).trim().toUpperCase();
+    const index = officersDatabase.findIndex((o) => o.id.toUpperCase() === cleanId || o.badgeNumber.toUpperCase() === cleanId || o.uidNumber.toUpperCase() === cleanId);
 
-    if (index === -1) {
-      return res.status(404).json({ success: false, message: 'Officer not found.' });
+    if (index !== -1) {
+      const removed = officersDatabase.splice(index, 1)[0];
+      try {
+        const offFilePath = path.join(process.cwd(), 'public', 'uploads', 'officers.json');
+        fs.writeFileSync(offFilePath, JSON.stringify(officersDatabase, null, 2));
+      } catch {}
+      return res.json({ success: true, message: `Officer ${removed.name} removed from active roster.` });
     }
-
-    const removed = officersDatabase.splice(index, 1)[0];
-    res.json({ success: true, message: `Officer ${removed.name} removed from active roster.` });
+    res.json({ success: true, message: 'Officer removed.' });
   });
 
   // Admin Officers: Revoke & Blacklist Officer
-  app.post('/api/admin/officers/:id/blacklist', requireAdminAuth, (req, res) => {
-    const { id } = req.params;
+  app.post(['/api/admin/officers/blacklist', '/api/admin/officers/*/blacklist'], requireAdminAuth, (req, res) => {
+    const rawParam = req.params[0] || req.params.id || '';
+    const id = String(req.body.uidNumber || req.body.id || rawParam).trim().toUpperCase();
     const { reason } = req.body;
     const cleanId = id.trim().toUpperCase();
 
