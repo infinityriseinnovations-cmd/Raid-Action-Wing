@@ -246,4 +246,42 @@
   animation: fadeIn 0.2s ease-out forwards;
 }
 
+/* ========================================================================= */
+/* GOOGLE TRANSLATE ENGINE STYLING & BANNER SUPPRESSION                     */
+/* ========================================================================= */
+.goog-te-banner-frame.skiptranslate,
+.goog-te-banner-frame,
+iframe.goog-te-banner-frame {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+}
+
+body {
+  top: 0px !important;
+  position: static !important;
+}
+
+#goog-gt-tt,
+.goog-te-balloon-frame {
+  display: none !important;
+}
+
+.goog-text-highlight {
+  background: none !important;
+  box-shadow: none !important;
+}
+
+.skiptranslate:not(.goog-te-gadget) {
+  display: none !important;
+}
+
+.goog-te-gadget {
+  height: 0px !important;
+  overflow: hidden !important;
+  position: absolute !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
 

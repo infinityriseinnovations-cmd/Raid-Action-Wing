@@ -15,30 +15,46 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
     <footer className="w-full bg-[#0a192f] text-white border-t-4 border-red-600">
       <div className="max-w-7xl mx-auto px-4 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {/* Col 1: Organization Identity & Emblem */}
+          {/* Col 1: Organization Identity & Emblem (Matching Header Layout with Light Text) */}
           <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <RawfLogo className="w-10 h-10 bg-white" />
-              <div>
-                <span className="font-headline font-bold text-base uppercase text-white block leading-tight">
-                  RAWF India
+            <button
+              onClick={() => handleNav('home')}
+              className="flex items-center gap-3 text-left cursor-pointer group notranslate"
+              translate="no"
+              aria-label="Raid Action Wing Foundation Homepage"
+            >
+              {/* Round Insignia Emblem */}
+              <div className="h-14 w-14 sm:h-16 sm:w-16 flex items-center justify-center shrink-0">
+                <RawfLogo className="w-full h-full object-contain drop-shadow-xs group-hover:scale-105 transition-transform duration-200" />
+              </div>
+
+              {/* Official Typography Header in Crisp Light Text */}
+              <div className="flex flex-col justify-center text-left">
+                <span className="font-headline font-black text-base sm:text-lg lg:text-xl text-white tracking-tight leading-none group-hover:text-blue-300 transition-colors">
+                  RAID ACTING WING (F)
                 </span>
-                <span className="text-[11px] text-slate-400 font-mono">
-                  IFA 760 • ITA ACT 1882
+                <span className="font-id-hindi font-bold text-xs sm:text-sm text-red-400 tracking-normal leading-tight mt-1">
+                  छापा कार्यवाही विभाग (एफ)
+                </span>
+                <span className="text-[9px] sm:text-[10px] font-bold text-slate-300 tracking-widest uppercase leading-tight mt-0.5">
+                  GOVERNMENT OF INDIA
                 </span>
               </div>
-            </div>
+            </button>
 
             <p className="text-xs text-slate-300 leading-relaxed">
               A Name of Crime & Corruption Free Killer Team — Citizen Vigilance & Human Rights. Committed to supreme legal accountability and unyielding civic oversight across India.
             </p>
 
-            <div className="flex flex-wrap gap-2 pt-1">
+            <div className="flex flex-wrap gap-2 pt-1 notranslate" translate="no">
               <span className="px-2 py-0.5 bg-blue-950 text-blue-200 border border-blue-800 text-[10px] font-mono rounded">
                 DARPAN: DL/2021/RAWF
               </span>
               <span className="px-2 py-0.5 bg-blue-950 text-blue-200 border border-blue-800 text-[10px] font-mono rounded">
                 MSME UDYAM CERTIFIED
+              </span>
+              <span className="px-2 py-0.5 bg-blue-950 text-amber-300 border border-blue-800 text-[10px] font-mono rounded font-bold">
+                IFA 760 CHARTER
               </span>
             </div>
           </div>

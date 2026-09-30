@@ -38,14 +38,27 @@ import { ContactPage } from './pages/ContactPage';
 import { ApplyOnlinePage } from './pages/ApplyOnlinePage';
 import { AdminPage } from './pages/AdminPage';
 import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
+import { FloatingLanguageWidget } from './components/FloatingLanguageWidget';
+import { SupportedLanguage, getSavedLanguage, changeLanguage, initializeGoogleTranslate, protectIconsAndLogosFromTranslation } from './utils/translator';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<string>('home');
   const [currentSubParam, setCurrentSubParam] = useState<string | undefined>(undefined);
-  const [lang, setLang] = useState<'en' | 'hi'>('en');
+  const [lang, setLang] = useState<SupportedLanguage>(getSavedLanguage());
   const [verifyModalOpen, setVerifyModalOpen] = useState(false);
   const [verifyPrefillCode, setVerifyPrefillCode] = useState<string | undefined>(undefined);
   const [prefillWing, setPrefillWing] = useState<string | undefined>(undefined);
+
+  // Initialize official Google Translate subsystem and protect icons/logos
+  useEffect(() => {
+    protectIconsAndLogosFromTranslation();
+    initializeGoogleTranslate();
+  }, []);
+
+  // Ensure protection whenever the page changes
+  useEffect(() => {
+    protectIconsAndLogosFromTranslation();
+  }, [currentPage]);
 
   // Sync hash changes for anchor navigation or deep links
   useEffect(() => {
@@ -88,7 +101,8 @@ export default function App() {
   };
 
   const handleToggleLang = () => {
-    setLang((prev) => (prev === 'en' ? 'hi' : 'en'));
+    const nextLang: SupportedLanguage = lang === 'en' ? 'hi' : 'en';
+    changeLanguage(nextLang, setLang);
   };
 
   const handleSelectServiceForReport = (title: string) => {
@@ -258,6 +272,12 @@ export default function App() {
         isOpen={verifyModalOpen}
         onClose={handleCloseVerifyModal}
         prefillCode={verifyPrefillCode}
+      />
+
+      {/* Floating Language Switcher (Right Middle) */}
+      <FloatingLanguageWidget
+        currentLang={lang}
+        onLanguageChange={setLang}
       />
     </div>
   );

@@ -28,7 +28,7 @@ export const PortalHub: React.FC = () => {
                   Open Enrollment
                 </span>
                 <div className="w-11 h-11 rounded-lg bg-red-50 text-red-600 flex items-center justify-center mt-3 group-hover:scale-105 transition-transform">
-                  <span className="material-symbols-outlined text-[24px]">person_add</span>
+                  <span className="material-symbols-outlined notranslate text-[24px]" translate="no">person_add</span>
                 </div>
               </div>
               <div>
@@ -46,7 +46,7 @@ export const PortalHub: React.FC = () => {
                 className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 px-3 rounded bg-red-600 hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider transition-colors shadow-2xs"
               >
                 <span>Apply for Membership</span>
-                <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                <span className="material-symbols-outlined notranslate text-[16px]" translate="no">arrow_forward</span>
               </a>
             </div>
           </div>
@@ -59,7 +59,7 @@ export const PortalHub: React.FC = () => {
                   Encrypted Clearance
                 </span>
                 <div className="w-11 h-11 rounded-lg bg-blue-50 text-[#0d47a1] flex items-center justify-center mt-3 group-hover:scale-105 transition-transform">
-                  <span className="material-symbols-outlined text-[24px]">badge</span>
+                  <span className="material-symbols-outlined notranslate text-[24px]" translate="no">badge</span>
                 </div>
               </div>
               <div>
@@ -77,7 +77,7 @@ export const PortalHub: React.FC = () => {
                 className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 px-3 rounded bg-[#0d47a1] hover:bg-blue-900 text-white font-bold text-xs uppercase tracking-wider transition-colors shadow-2xs"
               >
                 <span>Download ID Card</span>
-                <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                <span className="material-symbols-outlined notranslate text-[16px]" translate="no">arrow_forward</span>
               </a>
             </div>
           </div>
@@ -90,7 +90,7 @@ export const PortalHub: React.FC = () => {
                   Live Schedule
                 </span>
                 <div className="w-11 h-11 rounded-lg bg-green-50 text-emerald-700 flex items-center justify-center mt-3 group-hover:scale-105 transition-transform">
-                  <span className="material-symbols-outlined text-[24px]">event_available</span>
+                  <span className="material-symbols-outlined notranslate text-[24px]" translate="no">event_available</span>
                 </div>
               </div>
               <div>
@@ -108,7 +108,7 @@ export const PortalHub: React.FC = () => {
                 className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 px-3 rounded bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs uppercase tracking-wider transition-colors shadow-2xs"
               >
                 <span>View Events Calendar</span>
-                <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                <span className="material-symbols-outlined notranslate text-[16px]" translate="no">arrow_forward</span>
               </a>
             </div>
           </div>
@@ -121,7 +121,7 @@ export const PortalHub: React.FC = () => {
                   Tax Exempt 80G
                 </span>
                 <div className="w-11 h-11 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center mt-3 group-hover:scale-105 transition-transform">
-                  <span className="material-symbols-outlined text-[24px]">volunteer_activism</span>
+                  <span className="material-symbols-outlined notranslate text-[24px]" translate="no">volunteer_activism</span>
                 </div>
               </div>
               <div>
@@ -139,7 +139,7 @@ export const PortalHub: React.FC = () => {
                 className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 px-3 rounded bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs uppercase tracking-wider transition-colors shadow-2xs"
               >
                 <span>Donate to Cause</span>
-                <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                <span className="material-symbols-outlined notranslate text-[16px]" translate="no">arrow_forward</span>
               </a>
             </div>
           </div>

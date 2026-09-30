@@ -142,12 +142,12 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span className="text-blue-300/40">|</span>
             <button
               onClick={onToggleLang}
-              className="flex items-center gap-1 cursor-pointer hover:text-white bg-blue-900/60 px-2 py-0.5 rounded border border-blue-700/50 transition-colors"
-              title="Toggle English / Hindi"
+              className="flex items-center gap-1.5 cursor-pointer hover:text-white bg-blue-900/80 hover:bg-blue-800 px-2.5 py-0.5 rounded border border-blue-600/70 transition-colors shadow-2xs"
+              title="Toggle English / Hindi (भाषा बदलें)"
               aria-label={`Switch language to ${lang === 'en' ? 'Hindi' : 'English'}`}
             >
-              <span className="material-symbols-outlined text-[14px]">g_translate</span>
-              <span className="font-bold">{lang === 'en' ? 'EN' : 'HI'}</span>
+              <span className="material-symbols-outlined text-[15px] text-amber-300">g_translate</span>
+              <span className="font-bold text-white tracking-wide">{lang === 'en' ? 'हिन्दी (HI)' : 'English (EN)'}</span>
             </button>
           </div>
         </div>
@@ -157,10 +157,12 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         <div className="h-18 sm:h-20 md:h-22 flex items-center justify-between gap-2 sm:gap-4">
           
-          {/* Logo & Official Title (Uncompressed, Proportionate across Desktop & Mobile) */}
+          {/* Logo & Official Title (Uncompressed, Protected from Translation) */}
           <button
             onClick={() => handleNavClick('home')}
-            className="flex items-center gap-2 sm:gap-3.5 group py-1 text-left cursor-pointer shrink min-w-0"
+            className="flex items-center gap-2 sm:gap-3.5 group py-1 text-left cursor-pointer shrink min-w-0 notranslate"
+            translate="no"
+            data-brand-logo="true"
             aria-label="Raid Action Wing Foundation - Return to Homepage"
           >
             {/* Round Insignia Emblem */}
@@ -169,7 +171,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
 
             {/* Official Typography Header */}
-            <div className="flex flex-col justify-center text-left min-w-0">
+            <div className="flex flex-col justify-center text-left min-w-0 notranslate" translate="no">
               <span className="font-headline font-black text-xs xs:text-sm sm:text-lg md:text-xl lg:text-2xl text-[#0a192f] tracking-tight leading-none group-hover:text-[#0d47a1] transition-colors truncate">
                 RAID ACTING WING (F)
               </span>
@@ -245,13 +247,13 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Slide-out Menu Panel (Responsive: full width on phone, sleek drawer on tablet/desktop) */}
           <div className="relative w-full max-w-md sm:max-w-lg bg-white h-full shadow-2xl flex flex-col z-10 animate-slideLeft">
             
-            {/* Drawer Header */}
-            <div className="p-4 sm:p-5 bg-linear-to-r from-[#0a192f] via-[#0d47a1] to-[#0a192f] text-white flex items-center justify-between border-b border-blue-900 shadow-md shrink-0">
+            {/* Drawer Header (Protected from Translation) */}
+            <div className="p-4 sm:p-5 bg-linear-to-r from-[#0a192f] via-[#0d47a1] to-[#0a192f] text-white flex items-center justify-between border-b border-blue-900 shadow-md shrink-0 notranslate" translate="no">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-white/10 p-1 flex items-center justify-center border border-white/20">
                   <RawfLogo className="w-full h-full object-contain" />
                 </div>
-                <div>
+                <div className="notranslate" translate="no">
                   <h2 className="font-headline font-black text-sm sm:text-base text-white tracking-tight leading-none">
                     RAID ACTING WING (F)
                   </h2>
