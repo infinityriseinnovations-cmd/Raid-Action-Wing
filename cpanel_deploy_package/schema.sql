@@ -205,3 +205,22 @@ CREATE TABLE `donations` (
   KEY `idx_donations_pan` (`pan_number`),
   KEY `idx_donations_created` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------------------------
+-- 10. SYSTEM SETTINGS & METADATA TABLE
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `system_settings` (
+  `setting_key` VARCHAR(100) NOT NULL PRIMARY KEY,
+  `setting_value` LONGTEXT NOT NULL,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO `system_settings` (`setting_key`, `setting_value`) VALUES
+('organizationName', 'RAID ACTION WING FOUNDATION (RAWF)'),
+('helpline', '1800-RAW-CELL / +91 98200 45678'),
+('email', 'command@raidactionwing.in'),
+('address', 'National HQ, New Delhi • Registered under ITA Act 1882 & IFA 760 Charter'),
+('nitiAayogDarpan', 'DL/2021/RAWF'),
+('msmeUdyam', 'UP-50-0196301')
+ON DUPLICATE KEY UPDATE `setting_value` = VALUES(`setting_value`);
+

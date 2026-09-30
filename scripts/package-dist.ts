@@ -42,9 +42,12 @@ async function createDeployZip() {
   // Add all dist files recursively
   await addDirectoryToZip(zip, distDir);
 
-  // Add required upload directory structures
+  // Add required upload directory structures and placeholder data
   zip.file('uploads/officers/.gitkeep', '');
+  zip.file('uploads/activities/.gitkeep', '');
   zip.file('uploads/evidence/.gitkeep', '');
+  zip.file('uploads/indian-laws/.gitkeep', '');
+  zip.file('uploads/qr/.gitkeep', '');
   zip.file('uploads/banners/.gitkeep', '');
 
   // Generate ZIP file

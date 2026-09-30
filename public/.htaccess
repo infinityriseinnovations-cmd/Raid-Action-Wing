@@ -12,18 +12,26 @@
   RewriteCond %{HTTPS} off
   RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
-  # 2. SPA Fallback: If requested resource is not an existing file/directory, load index.html
+  # 2. REST API Direct Routing to cPanel PHP Controller
+  RewriteRule ^api/(.*)$ api/index.php [QSA,L]
+  RewriteRule ^api$ api/index.php [QSA,L]
+
+  # 3. SPA Fallback: If requested resource is not an existing file or directory, load index.html
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteRule ^(.*)$ index.html [L,QSA]
 </IfModule>
 
-# MIME Type Support for Modern JavaScript Modules & Assets
+# MIME Type Support for Modern JavaScript Modules & Media Assets
 <IfModule mod_mime.c>
   AddType application/javascript          .js .mjs
   AddType application/json                .json
   AddType image/svg+xml                   .svg .svgz
   AddType image/webp                      .webp
+  AddType image/jpeg                      .jpg .jpeg
+  AddType image/png                       .png
+  AddType video/mp4                       .mp4
+  AddType video/webm                      .webm
   AddType application/pdf                 .pdf
   AddType font/woff2                      .woff2
   AddType font/woff                       .woff
@@ -36,28 +44,29 @@
   Header set X-XSS-Protection "1; mode=block"
   Header set Referrer-Policy "strict-origin-when-cross-origin"
   Header set Access-Control-Allow-Origin "*"
+  Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+  Header set Access-Control-Allow-Headers "Origin, X-Requested-With, Content-Type, Accept, Authorization"
 
   # Prevent Search Engines from scraping confidential officer photos
   <FilesMatch "\.(jpg|jpeg|png|webp|avif)$">
     Header set X-Robots-Tag "noimageindex"
   </FilesMatch>
 
-  # HTML Files: Always serve fresh so app updates take effect immediately
-  <FilesMatch "\.(html|htm)$">
+  # Dynamic Entry Point & API: Always fresh
+  <FilesMatch "\.(html|htm|php)$">
     Header set Cache-Control "no-cache, no-store, must-revalidate"
   </FilesMatch>
 </IfModule>
 
-# Browser Caching for Performance
+# Media & Static Asset Caching
 <IfModule mod_expires.c>
   ExpiresActive On
   ExpiresDefault "access plus 1 month"
   ExpiresByType text/html "access plus 0 seconds"
+  ExpiresByType application/json "access plus 0 seconds"
   ExpiresByType text/css "access plus 1 year"
   ExpiresByType application/javascript "access plus 1 year"
   ExpiresByType image/jpeg "access plus 1 month"
   ExpiresByType image/png "access plus 1 month"
-  ExpiresByType image/svg+xml "access plus 1 month"
-  ExpiresByType image/webp "access plus 1 month"
-  ExpiresByType font/woff2 "access plus 1 year"
+  ExpiresByType video/mp4 "access plus 1 month"
 </IfModule>

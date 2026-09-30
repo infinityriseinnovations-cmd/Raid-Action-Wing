@@ -252,3 +252,22 @@ INSERT INTO `officers` (`id`, `uid_number`, `badge_number`, `name`, `gender`, `d
 ('RW-LEG-001', 'RW-LEG-001', 'RW-LEG-001', 'Shekhar Kumar Nigam', 'Male', '1975-11-18', '2021-02-01', '+91 98101 22334', 'shekhar.nigam@raidactionwing.in', 'Chief Legal Advisor & Advocate', 'legal', 'Supreme Court & High Courts', 'VERIFIED', 'https://lh3.googleusercontent.com/aida-public/AB6AXuBKBCimjG0t1Psi8NaW5y8ZgGe-tVqjZvwsrTMqXJxoHOnsCBW5xp-MEf3kF0BUVI13eU257ZEk5qleDMl-E8-NJyRLA8QXgv87iz2Dmx-cVK15KP9s1NnOfjkkwFhSrq5tOIVOSbqgtI3uGEiXcm-ZVJW3N25MAS-_to6BIFBpa3YVexuhBluhv_4Ws9_slKeyV6QwyacnImqe_0E_7gI8gwvpD-TnyhFzs8d6atjcHjuZucvfY_hl7Q', '31-DEC-2028', 'Constitutional Rights, Anticipatory Bail & Writs'),
 ('RW-NAT-002', 'RW-NAT-002', 'RW-NAT-002', 'Vishal Nain', 'Male', '1986-04-08', '2022-05-10', '+91 98112 33445', 'vishal.nain@raidactionwing.in', 'National Deputy Director (India)', 'national', 'National HQ', 'ACTIVE', 'https://lh3.googleusercontent.com/aida-public/AB6AXuDGi_EgkVKseLfKV27C6HTcNJHIos7qqFDnbT4fbIYckiKs7pgl9QqMBfBTowT-k04KyQblyZl1sjwPyxJzShvNe522AAL5s7eavqteLF80e8tSGaKMDqj-RRKkeVonrebNxuQXeH-52UjEsTMig7eYQSECi4-3gXwKd87FTziON3_mdC6kLlrxnapbxyZsYZ1S16n8-0JJMPgGJqQyITxFHRjUe0JhVOSybtlqvMOVbT_dYawEhfuWXw', '31-DEC-2027', 'Inter-Agency Liaison & Field Intelligence'),
 ('RW-UP-106', 'RW-UP-106', 'RW-UP-106', 'Subedar Saroj / Ajay Kumar', 'Male', '1980-06-12', '2023-01-15', '+91 94150 11223', 'subedar.saroj@raidactionwing.in', 'State Incharges (Uttar Pradesh)', 'state', 'Uttar Pradesh', 'ACTIVE', 'https://lh3.googleusercontent.com/aida-public/AB6AXuCmZOpfbug19sIOaInPooKLlPo4DYXaV5nnLv02DzRz_QArFJv5Q-1t2gcJEeD5koEUm6UnK-kn1cyEhQvbNXaLWzSEQyXtP3Jtbb0T8Elu-_riLzGqfiIvwj1uiwzvtfozNAXJizD7PouYEdKymX0-LmpzGs3T-hwi8EXEEwOisQDkfNyhOfVKzlXwRz7iVCIn7eF3eLrqYbVfDzq9ur6fypCfinXowr1DIu_NdhigHdqEVtmhC_h8Vw', '31-DEC-2026', 'Northern Zone Field Coordination');
+
+-- ------------------------------------------------------------------------------
+-- 10. SYSTEM SETTINGS & METADATA TABLE
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `system_settings` (
+  `setting_key` VARCHAR(100) NOT NULL PRIMARY KEY,
+  `setting_value` LONGTEXT NOT NULL,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO `system_settings` (`setting_key`, `setting_value`) VALUES
+('organizationName', 'RAID ACTION WING FOUNDATION (RAWF)'),
+('helpline', '1800-RAW-CELL / +91 98200 45678'),
+('email', 'command@raidactionwing.in'),
+('address', 'National HQ, New Delhi • Registered under ITA Act 1882 & IFA 760 Charter'),
+('nitiAayogDarpan', 'DL/2021/RAWF'),
+('msmeUdyam', 'UP-50-0196301')
+ON DUPLICATE KEY UPDATE `setting_value` = VALUES(`setting_value`);
+

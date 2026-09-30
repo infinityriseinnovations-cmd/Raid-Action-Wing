@@ -87,21 +87,25 @@ export const DirectorBroadcastVideo: React.FC<DirectorBroadcastVideoProps> = ({
     const reader = new FileReader();
     reader.onload = async () => {
       const base64Data = reader.result as string;
+      const adminToken = localStorage.getItem('rawf_admin_token') || '';
       try {
         const res = await fetch('/api/broadcast-video', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(adminToken ? { Authorization: `Bearer ${adminToken}` } : {})
+          },
           body: JSON.stringify({ videoBase64: base64Data })
         });
         const data = await res.json();
         if (data.success && data.url) {
           setVideoSrc(data.url);
-          setUploadMsg('✓ Video successfully updated and saved on server!');
+          setUploadMsg('✓ Video successfully saved permanently to cPanel storage!');
         } else {
-          setUploadMsg('Video loaded for current session.');
+          setUploadMsg(data.message || 'Video loaded for current session.');
         }
       } catch {
-        setUploadMsg('Video loaded locally.');
+        setUploadMsg('Video saved locally.');
       } finally {
         setUploadLoading(false);
         setTimeout(() => setUploadMsg(null), 4000);
