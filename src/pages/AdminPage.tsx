@@ -2394,10 +2394,26 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                 </ul>
               </div>
 
-              <div className="pt-2">
+              <div className="pt-2 flex flex-col gap-2">
+                <a
+                  href="/api/download/deploy-zip"
+                  download="rawf_deploy_package.zip"
+                  className="w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs uppercase rounded flex items-center justify-center gap-2 cursor-pointer shadow-xs transition-colors text-center"
+                >
+                  <span className="material-symbols-outlined text-[18px]">folder_zip</span>
+                  Download Ready-to-Upload cPanel ZIP (rawf_deploy_package.zip)
+                </a>
+                <a
+                  href="/api/download/sql"
+                  download="rawf_production_schema.sql"
+                  className="w-full py-2 bg-blue-800 hover:bg-blue-900 text-white font-bold text-xs uppercase rounded flex items-center justify-center gap-2 cursor-pointer shadow-xs transition-colors text-center"
+                >
+                  <span className="material-symbols-outlined text-[18px]">database</span>
+                  Download MySQL Database Schema (.sql)
+                </a>
                 <button
                   onClick={handleExportBackup}
-                  className="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs uppercase rounded flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+                  className="w-full py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs uppercase rounded flex items-center justify-center gap-2 cursor-pointer shadow-xs"
                 >
                   <span className="material-symbols-outlined text-[18px]">download</span>
                   Export Full JSON Database Backup
