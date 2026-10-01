@@ -263,18 +263,19 @@ export const officersApi = {
 export const membershipApi = {
   submit: (application: {
     fullName: string;
+    gender?: string;
     mobile: string;
     email: string;
     wing: string;
     state: string;
-    aadhaarNumber: string;
+    aadhaarNumber?: string;
     background?: string;
   }) => {
     return apiClient.post<ApiResponse & { applicationId: string }>('/api/memberships', application);
   },
 
   getAll: (token: string, params?: { status?: string; search?: string }) => {
-    return apiClient.get<ApiResponse<MemberApplication[]>>('/api/admin/applications', params, token);
+    return apiClient.get<ApiResponse<MemberApplication[]>>('/api/admin/memberships', params, token);
   },
 
   updateStatus: (

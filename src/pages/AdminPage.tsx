@@ -113,7 +113,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
   const stats = {
     activeOfficersCount: officers.filter((o) => o.isActive !== false).length,
     totalOfficersCount: officers.length,
-    pendingApplicationsCount: applications.filter((a) => a.status === 'Pending').length,
+    pendingApplicationsCount: applications.filter((a) => a.status === 'Pending' || a.status === 'Pending Verification').length,
     totalApplicationsCount: applications.length,
     activeGrievancesCount: grievances.filter((g) => g.status !== 'Resolved' && g.status !== 'Closed').length,
     totalGrievancesCount: grievances.length,
@@ -122,6 +122,38 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
     blacklistedCount: blacklist.length,
     ...(serverStats || {})
   };
+
+  // Real-time synchronization for new membership applications submitted via public form
+  useEffect(() => {
+    const handleApplicationAdded = (e: any) => {
+      const newApp = e.detail;
+      if (newApp && (newApp.applicationId || newApp.id)) {
+        const targetId = newApp.applicationId || newApp.id;
+        setApplications((prev) => {
+          if (prev.some((a) => (a.applicationId || a.id) === targetId)) return prev;
+          return [newApp, ...prev];
+        });
+      }
+    };
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'rawf_data_applications' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setApplications(parsed);
+          }
+        } catch {}
+      }
+    };
+
+    window.addEventListener('rawf_application_added', handleApplicationAdded);
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('rawf_application_added', handleApplicationAdded);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
 
   // Sync state changes to localStorage
   useEffect(() => {
@@ -302,7 +334,18 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
 
       if (statsData && statsData.success) setServerStats(statsData.stats);
       if (offData && offData.success && Array.isArray(offData.data) && offData.data.length > 0) setOfficers(offData.data);
-      if (appData && appData.success && Array.isArray(appData.data) && appData.data.length > 0) setApplications(appData.data);
+      if (appData && appData.success && Array.isArray(appData.data)) {
+        setApplications((prev) => {
+          const serverList = appData.data;
+          const serverIds = new Set(serverList.map((a: any) => a.applicationId || a.id));
+          const unmergedLocal = prev.filter((p) => !serverIds.has(p.applicationId || p.id));
+          const merged = [...unmergedLocal, ...serverList];
+          try {
+            localStorage.setItem('rawf_data_applications', JSON.stringify(merged));
+          } catch {}
+          return merged;
+        });
+      }
       if (grvData && grvData.success && Array.isArray(grvData.data) && grvData.data.length > 0) setGrievances(grvData.data);
       if (donData && donData.success && Array.isArray(donData.data) && donData.data.length > 0) setDonations(donData.data);
       if (blData && blData.success && Array.isArray(blData.data) && blData.data.length > 0) setBlacklist(blData.data);
@@ -1170,13 +1213,19 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
   );
 
   const filteredApplications = applications.filter((app) => {
-    const matchStatus = appFilterStatus === 'all' || app.status === appFilterStatus;
+    const matchStatus =
+      appFilterStatus === 'all' ||
+      app.status === appFilterStatus ||
+      (appFilterStatus === 'Pending Verification' && (app.status === 'Pending' || app.status === 'Pending Verification'));
     const matchSearch =
       !appSearch ||
-      app.fullName.toLowerCase().includes(appSearch.toLowerCase()) ||
-      app.wing.toLowerCase().includes(appSearch.toLowerCase()) ||
-      app.applicationId.toLowerCase().includes(appSearch.toLowerCase()) ||
-      app.state.toLowerCase().includes(appSearch.toLowerCase());
+      (app.fullName && app.fullName.toLowerCase().includes(appSearch.toLowerCase())) ||
+      (app.wing && app.wing.toLowerCase().includes(appSearch.toLowerCase())) ||
+      (app.applicationId && app.applicationId.toLowerCase().includes(appSearch.toLowerCase())) ||
+      (app.state && app.state.toLowerCase().includes(appSearch.toLowerCase())) ||
+      (app.mobile && app.mobile.includes(appSearch)) ||
+      (app.phone && app.phone.includes(appSearch)) ||
+      (app.email && app.email.toLowerCase().includes(appSearch.toLowerCase()));
     return matchStatus && matchSearch;
   });
 
@@ -1743,6 +1792,16 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => fetchAdminData(token)}
+                  className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs font-bold inline-flex items-center gap-1 cursor-pointer transition-colors"
+                  title="Reload Latest Applications from Server"
+                >
+                  <span className="material-symbols-outlined text-[15px]">refresh</span>
+                  <span>Refresh Queue</span>
+                </button>
+
                 <select
                   value={appFilterStatus}
                   onChange={(e) => setAppFilterStatus(e.target.value)}
@@ -1794,8 +1853,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                         {app.state}
                       </td>
                       <td className="p-3 font-mono text-slate-600">
-                        <div>{app.mobile}</div>
-                        <div className="text-[11px] text-slate-400">{app.email}</div>
+                        <div>{app.mobile || app.phone || 'N/A'}</div>
+                        <div className="text-[11px] text-slate-400">{app.email || 'N/A'}</div>
                       </td>
                       <td className="p-3">
                         <span

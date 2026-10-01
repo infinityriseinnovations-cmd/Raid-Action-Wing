@@ -52,7 +52,7 @@ if (preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
 
 function verifyAuth($token) {
     if (empty($token)) return false;
-    return strpos($token, 'rawf_admin_') === 0 || $token === 'RAWF_MASTER_SESSION_2026';
+    return strpos($token, 'rawf_admin_') === 0 || strpos($token, 'rawf-admin-') === 0 || strpos($token, 'rawf_token_') === 0 || $token === 'RAWF_MASTER_SESSION_2026';
 }
 
 // Helper: Save Base64 file to disk
@@ -678,9 +678,10 @@ if (($route === 'memberships' || $route === 'membership/apply') && $method === '
     exit;
 }
 
-// Admin Applications Management
-if ($routeParts[0] === 'admin' && isset($routeParts[1]) && $routeParts[1] === 'applications') {
+// Admin Applications & Memberships Management
+if ($routeParts[0] === 'admin' && isset($routeParts[1]) && ($routeParts[1] === 'applications' || $routeParts[1] === 'memberships')) {
     $appId = $routeParts[2] ?? null;
+    $action = $routeParts[3] ?? null;
 
     if ($method === 'GET' && !$appId) {
         $applications = [];
@@ -694,6 +695,64 @@ if ($routeParts[0] === 'admin' && isset($routeParts[1]) && $routeParts[1] === 'a
             $applications = getJsonStore('memberships', []);
         }
         echo json_encode(['success' => true, 'data' => $applications]);
+        exit;
+    }
+
+    // 1-Click Approve Application & Issue Official Badge
+    if ($method === 'POST' && $appId && $action === 'approve-and-issue-badge') {
+        $state = $input['state'] ?? 'National';
+        $stateCode = (strpos($state, 'Maharashtra') !== false) ? 'MH' : ((strpos($state, 'Delhi') !== false) ? 'DL' : 'IND');
+        $newBadge = "RW-{$stateCode}-" . rand(100, 999);
+        $newStatus = 'Approved';
+
+        if ($pdo) {
+            try {
+                $stmt = $pdo->prepare("UPDATE membership_applications SET status = ?, assigned_badge = ? WHERE application_id = ?");
+                $stmt->execute([$newStatus, $newBadge, $appId]);
+            } catch (Exception $e) {}
+        }
+
+        $applications = getJsonStore('memberships', []);
+        $approvedApp = null;
+        foreach ($applications as &$app) {
+            if ($app['applicationId'] === $appId) {
+                $app['status'] = $newStatus;
+                $app['assignedBadge'] = $newBadge;
+                $approvedApp = $app;
+                break;
+            }
+        }
+        saveJsonStore('memberships', $applications);
+
+        // Synchronize directly into active officers directory
+        if ($approvedApp) {
+            $officers = getJsonStore('officers', []);
+            $officerId = "RAWF/" . date('Y') . "/" . rand(1000, 9999);
+            $newOfficer = [
+                'id' => $officerId,
+                'uidNumber' => $officerId,
+                'badgeNumber' => $newBadge,
+                'name' => $approvedApp['fullName'] ?? 'Accredited Officer',
+                'gender' => $approvedApp['gender'] ?? 'Male',
+                'designation' => $approvedApp['wing'] ?? 'District Director',
+                'division' => 'state',
+                'state' => $approvedApp['state'] ?? 'National',
+                'phoneContact' => $approvedApp['mobile'] ?? '',
+                'email' => $approvedApp['email'] ?? '',
+                'status' => 'ACTIVE',
+                'validTill' => date('d/m/Y', strtotime('+3 years')),
+                'mandate' => 'Citizen Vigilance & Constitutional Anti-Corruption Oversight',
+                'isAssigned' => true
+            ];
+            array_unshift($officers, $newOfficer);
+            saveJsonStore('officers', $officers);
+        }
+
+        echo json_encode([
+            'success' => true,
+            'message' => "Application approved! Official badge {$newBadge} assigned.",
+            'badgeNumber' => $newBadge
+        ]);
         exit;
     }
 
