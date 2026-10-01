@@ -202,7 +202,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
     email: '',
     photoUrl: '',
     validTill: '11/09/2027',
-    mandate: 'Citizen Vigilance & Anti-Corruption Oversight'
+    mandate: 'Citizen Vigilance & Anti-Corruption Oversight',
+    isAssigned: true
   });
 
   // Modals & Form States for Membership Applications
@@ -402,8 +403,44 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
   };
 
   // ==========================================
-  // OFFICER ACTIONS (Create, Edit, Delete, Blacklist)
+  // OFFICER ACTIONS (Create, Edit, Delete, Blacklist, Assign)
   // ==========================================
+  const handleToggleAssignOfficer = async (officer: any) => {
+    const newAssignedStatus = officer.isAssigned === false ? true : false;
+    const updated = {
+      ...officer,
+      isAssigned: newAssignedStatus
+    };
+
+    const updatedList = officers.map((o) =>
+      o.id === officer.id || o.uidNumber === officer.uidNumber ? updated : o
+    );
+    setOfficers(updatedList);
+
+    try {
+      localStorage.setItem('rawf_data_officers', JSON.stringify(updatedList));
+      window.dispatchEvent(new CustomEvent('rawf_officers_updated'));
+    } catch {}
+
+    setFeedbackMsg({
+      type: 'success',
+      text: newAssignedStatus
+        ? `✓ Officer ${officer.name} (UID: ${officer.uidNumber || officer.badgeNumber}) assigned to Homepage Directorate Command section.`
+        : `Officer ${officer.name} unassigned from Homepage.`
+    });
+
+    try {
+      await fetch('/api/admin/officers', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(updated)
+      });
+    } catch {}
+  };
+
   const handleCreateOfficer = async (e: React.FormEvent) => {
     e.preventDefault();
     const newRecord = {
@@ -412,10 +449,17 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
       fullName: newOfficer.name,
       badgeNumber: newOfficer.uidNumber,
       email: newOfficer.email || `${newOfficer.name.toLowerCase().replace(/[^a-z0-9]/g, '.')}@raidactionwing.in`,
-      isActive: true
+      isActive: true,
+      isAssigned: newOfficer.isAssigned ?? true
     };
 
-    setOfficers((prev) => [newRecord, ...prev]);
+    const nextOfficers = [newRecord, ...officers];
+    setOfficers(nextOfficers);
+    try {
+      localStorage.setItem('rawf_data_officers', JSON.stringify(nextOfficers));
+      window.dispatchEvent(new CustomEvent('rawf_officers_updated'));
+    } catch {}
+
     setFeedbackMsg({ type: 'success', text: `Officer ${newRecord.name} (UID: ${newRecord.uidNumber}) appointed successfully.` });
     setShowAddOfficerModal(false);
     setViewingIdCardOfficer(newRecord);
@@ -435,7 +479,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
       email: '',
       photoUrl: '',
       validTill: '11/09/2027',
-      mandate: 'Citizen Vigilance & Anti-Corruption Oversight'
+      mandate: 'Citizen Vigilance & Anti-Corruption Oversight',
+      isAssigned: true
     });
 
     try {
@@ -459,7 +504,13 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
       badgeNumber: editingOfficer.uidNumber
     };
 
-    setOfficers((prev) => prev.map((o) => (o.id === editingOfficer.id || o.uidNumber === editingOfficer.uidNumber ? updated : o)));
+    const updatedList = officers.map((o) => (o.id === editingOfficer.id || o.uidNumber === editingOfficer.uidNumber ? updated : o));
+    setOfficers(updatedList);
+    try {
+      localStorage.setItem('rawf_data_officers', JSON.stringify(updatedList));
+      window.dispatchEvent(new CustomEvent('rawf_officers_updated'));
+    } catch {}
+
     setFeedbackMsg({ type: 'success', text: `Officer ${editingOfficer.name} updated successfully.` });
     setEditingOfficer(null);
 
@@ -481,7 +532,13 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
       return;
     }
 
-    setOfficers((prev) => prev.filter((o) => o.id !== officer.id && o.uidNumber !== officer.uidNumber));
+    const updatedList = officers.filter((o) => o.id !== officer.id && o.uidNumber !== officer.uidNumber);
+    setOfficers(updatedList);
+    try {
+      localStorage.setItem('rawf_data_officers', JSON.stringify(updatedList));
+      window.dispatchEvent(new CustomEvent('rawf_officers_updated'));
+    } catch {}
+
     setFeedbackMsg({ type: 'success', text: `Officer ${officer.name} deleted.` });
     if (viewingOfficer?.id === officer.id) setViewingOfficer(null);
     if (viewingIdCardOfficer?.id === officer.id) setViewingIdCardOfficer(null);
@@ -536,7 +593,67 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
     e.preventDefault();
     if (!editingApplication) return;
 
-    setApplications((prev) => prev.map((a) => (a.applicationId === editingApplication.applicationId ? editingApplication : a)));
+    const updatedApps = applications.map((a) =>
+      a.applicationId === editingApplication.applicationId ? editingApplication : a
+    );
+    setApplications(updatedApps);
+    try {
+      localStorage.setItem('rawf_data_applications', JSON.stringify(updatedApps));
+    } catch {}
+
+    // If status is set to Approved, ensure the member immediately appears in Officers Roster!
+    if (editingApplication.status === 'Approved') {
+      const alreadyInOfficers = officers.some(
+        (o) =>
+          (editingApplication.assignedBadge && (o.uidNumber === editingApplication.assignedBadge || o.badgeNumber === editingApplication.assignedBadge)) ||
+          (o.email && o.email === editingApplication.email) ||
+          o.name === editingApplication.fullName
+      );
+
+      if (!alreadyInOfficers) {
+        const assignedUid = editingApplication.assignedBadge || `RAWF/2026/${Math.floor(1000 + Math.random() * 9000)}`;
+        const newOfficerFromApp = {
+          id: Date.now(),
+          name: editingApplication.fullName,
+          fullName: editingApplication.fullName,
+          uidNumber: assignedUid,
+          badgeNumber: assignedUid,
+          designation: editingApplication.designation || editingApplication.wing || 'Field Officer',
+          division: editingApplication.wing?.toLowerCase().includes('national') ? 'national' : 'state',
+          state: editingApplication.state || 'Maharashtra',
+          gender: editingApplication.gender || 'Male',
+          dob: editingApplication.dob || '1995-12-20',
+          joinDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase(),
+          validTill: computeTenureExpiry(new Date().toISOString().split('T')[0]),
+          phoneContact: editingApplication.phone || editingApplication.mobile || '+91 98200 45678',
+          email: editingApplication.email || `${editingApplication.fullName.toLowerCase().replace(/[^a-z0-9]/g, '.')}@raidactionwing.in`,
+          photoUrl: editingApplication.photoUrl || '',
+          mandate: editingApplication.background || `${editingApplication.wing || 'Vigilance'} - Citizen Vigilance & Public Service`,
+          status: 'ACTIVE',
+          isActive: true,
+          isAssigned: true
+        };
+
+        const nextOfficers = [newOfficerFromApp, ...officers];
+        setOfficers(nextOfficers);
+        try {
+          localStorage.setItem('rawf_data_officers', JSON.stringify(nextOfficers));
+          window.dispatchEvent(new CustomEvent('rawf_officers_updated'));
+        } catch {}
+
+        try {
+          await fetch('/api/admin/officers', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify(newOfficerFromApp)
+          });
+        } catch {}
+      }
+    }
+
     setFeedbackMsg({ type: 'success', text: `Application ${editingApplication.applicationId} updated successfully.` });
     setEditingApplication(null);
 
@@ -557,7 +674,12 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
       return;
     }
 
-    setApplications((prev) => prev.filter((a) => a.applicationId !== app.applicationId));
+    const nextApps = applications.filter((a) => a.applicationId !== app.applicationId);
+    setApplications(nextApps);
+    try {
+      localStorage.setItem('rawf_data_applications', JSON.stringify(nextApps));
+    } catch {}
+
     setFeedbackMsg({ type: 'success', text: `Application ${app.applicationId} deleted.` });
     if (viewingApplication?.applicationId === app.applicationId) setViewingApplication(null);
 
@@ -574,44 +696,75 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
 
     const app = applications.find((a) => a.applicationId === appId);
     if (app) {
-      const newUid = `RAWF/2026/${Math.floor(1000 + Math.random() * 9000)}`;
+      const newUid = app.assignedBadge || `RAWF/2026/${Math.floor(1000 + Math.random() * 9000)}`;
       const newOff = {
         id: Date.now(),
         name: app.fullName,
         fullName: app.fullName,
         uidNumber: newUid,
         badgeNumber: newUid,
-        designation: app.designation || 'Field Officer',
-        division: 'state',
-        state: app.state,
+        designation: app.designation || app.wing || 'Field Officer',
+        division: app.wing?.toLowerCase().includes('national') ? 'national' : 'state',
+        state: app.state || 'Maharashtra',
         gender: app.gender || 'Male',
         dob: app.dob || '1995-12-20',
-        joinDate: new Date().toISOString().split('T')[0],
+        joinDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase(),
         validTill: computeTenureExpiry(new Date().toISOString().split('T')[0]),
-        phoneContact: app.phone,
-        email: app.email,
+        phoneContact: app.phone || app.mobile || '+91 98200 45678',
+        email: app.email || `${app.fullName.toLowerCase().replace(/[^a-z0-9]/g, '.')}@raidactionwing.in`,
         photoUrl: app.photoUrl || '',
-        mandate: `${app.wing} - Citizen Vigilance & Public Service`,
-        isActive: true
+        mandate: app.background || `${app.wing || 'Vigilance'} - Citizen Vigilance & Public Service`,
+        status: 'ACTIVE',
+        isActive: true,
+        isAssigned: true
       };
 
-      setApplications((prev) => prev.map((a) => (a.applicationId === appId ? { ...a, status: 'Approved' } : a)));
-      setOfficers((prev) => [newOff, ...prev]);
-      setFeedbackMsg({ type: 'success', text: `Applicant ${app.fullName} approved! Assigned UID: ${newUid}` });
+      const updatedApps = applications.map((a) =>
+        a.applicationId === appId ? { ...a, status: 'Approved', assignedBadge: newUid } : a
+      );
+      setApplications(updatedApps);
+      try {
+        localStorage.setItem('rawf_data_applications', JSON.stringify(updatedApps));
+      } catch {}
+
+      // Add to Officers Roster
+      const nextOfficers = [newOff, ...officers.filter((o) => o.email !== app.email && o.name !== app.fullName)];
+      setOfficers(nextOfficers);
+      try {
+        localStorage.setItem('rawf_data_officers', JSON.stringify(nextOfficers));
+        window.dispatchEvent(new CustomEvent('rawf_officers_updated'));
+      } catch {}
+
+      setFeedbackMsg({
+        type: 'success',
+        text: `✓ Applicant ${app.fullName} Approved! Issued UID ${newUid} & placed in Officers Roster.`
+      });
+
       if (viewingApplication?.applicationId === appId) setViewingApplication(null);
       setViewingIdCardOfficer(newOff);
       setIdCardModalTab('card');
-    }
 
-    try {
-      await fetch(`/api/admin/memberships/${encodeURIComponent(appId)}/approve-and-issue-badge`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        }
-      });
-    } catch {}
+      try {
+        await fetch(`/api/admin/memberships/${encodeURIComponent(appId)}/approve-and-issue-badge`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          }
+        });
+      } catch {}
+
+      try {
+        await fetch('/api/admin/officers', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify(newOff)
+        });
+      } catch {}
+    }
   };
 
   const handleRejectApplication = async (appId: string) => {
@@ -1402,8 +1555,9 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                     <th className="p-3">Designation / Role</th>
                     <th className="p-3">Jurisdiction</th>
                     <th className="p-3">Status</th>
+                    <th className="p-3 text-center">Homepage Assignment</th>
                     <th className="p-3">Expiry Date</th>
-                    <th className="p-3 text-right">Actions (ID Card / View / Edit / Delete)</th>
+                    <th className="p-3 text-right">Actions (Assign / ID Card / View / Edit / Delete)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -1454,10 +1608,57 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                           {off.status}
                         </span>
                       </td>
+                      {/* HOMEPAGE ASSIGNMENT TOGGLE */}
+                      <td className="p-3 text-center">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleAssignOfficer(off)}
+                          className={`px-2.5 py-1 rounded font-bold text-[11px] uppercase transition-all inline-flex items-center gap-1.5 cursor-pointer shadow-2xs border ${
+                            off.isAssigned !== false
+                              ? 'bg-emerald-50 hover:bg-red-50 text-emerald-700 hover:text-red-700 border-emerald-300 hover:border-red-300 group'
+                              : 'bg-slate-100 hover:bg-[#0d47a1] text-slate-600 hover:text-white border-slate-300'
+                          }`}
+                          title={
+                            off.isAssigned !== false
+                              ? 'Currently featured on Homepage (Click to Unassign)'
+                              : 'Click to assign officer to Homepage Directorate Command section'
+                          }
+                        >
+                          {off.isAssigned !== false ? (
+                            <>
+                              <span className="w-2 h-2 rounded-full bg-emerald-500 group-hover:bg-red-500"></span>
+                              <span className="group-hover:hidden">Assigned</span>
+                              <span className="hidden group-hover:inline">Unassign</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="material-symbols-outlined text-[14px]">add_circle</span>
+                              <span>Assign</span>
+                            </>
+                          )}
+                        </button>
+                      </td>
                       <td className="p-3 font-mono text-slate-600">
                         {off.validTill}
                       </td>
                       <td className="p-3 text-right space-x-1 whitespace-nowrap">
+                        {/* ASSIGN / UNASSIGN BUTTON */}
+                        <button
+                          type="button"
+                          onClick={() => handleToggleAssignOfficer(off)}
+                          className={`px-2 py-1 rounded text-[11px] font-bold uppercase transition-colors cursor-pointer inline-flex items-center gap-1 border ${
+                            off.isAssigned !== false
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-600 hover:text-white'
+                              : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-[#0d47a1] hover:text-white'
+                          }`}
+                          title={off.isAssigned !== false ? 'Assigned to Homepage (Click to Unassign)' : 'Assign to Homepage'}
+                        >
+                          <span className="material-symbols-outlined text-[13px]">
+                            {off.isAssigned !== false ? 'check_circle' : 'assignment_ind'}
+                          </span>
+                          <span>{off.isAssigned !== false ? 'Assigned' : 'Assign'}</span>
+                        </button>
+
                         {/* ID CARD BUTTON */}
                         <button
                           onClick={() => {
@@ -1515,7 +1716,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                   ))}
                   {filteredOfficers.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="p-6 text-center text-slate-400 text-xs">
+                      <td colSpan={8} className="p-6 text-center text-slate-400 text-xs">
                         No officers match your search query.
                       </td>
                     </tr>
@@ -2996,6 +3197,26 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                 />
               </div>
 
+              {/* Homepage Directorate Command Assignment */}
+              <div className="bg-blue-50/60 p-2.5 rounded-lg border border-blue-200">
+                <label className="flex items-center gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={editingOfficer.isAssigned !== false}
+                    onChange={(e) => setEditingOfficer({ ...editingOfficer, isAssigned: e.target.checked })}
+                    className="w-4 h-4 text-[#0d47a1] rounded border-slate-300 focus:ring-[#0d47a1] cursor-pointer"
+                  />
+                  <div>
+                    <span className="font-bold text-slate-900 text-xs block">
+                      Assign to Homepage (Active Officers &amp; Directorate Command)
+                    </span>
+                    <span className="text-[10px] text-slate-500 block">
+                      When enabled, this officer is showcased in the public homepage Active Officers section.
+                    </span>
+                  </div>
+                </label>
+              </div>
+
               <div className="pt-2 flex justify-end gap-2">
                 <button
                   type="button"
@@ -3137,8 +3358,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
       {/* MODAL 4: EDIT MEMBERSHIP APPLICATION                     */}
       {/* ======================================================== */}
       {editingApplication && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 relative animate-scaleUp">
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-4 relative animate-scaleUp my-auto max-h-[92vh] overflow-y-auto">
             <button
               onClick={() => setEditingApplication(null)}
               className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 p-1 rounded-full cursor-pointer"
@@ -3153,84 +3374,53 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                   Edit Membership Application
                 </h3>
                 <span className="text-[10px] font-mono text-slate-500 uppercase">
-                  App ID: {editingApplication.applicationId}
+                  App ID: {editingApplication.applicationId} • Full Statutory Intake Record
                 </span>
               </div>
             </div>
 
-            <form onSubmit={handleUpdateApplication} className="space-y-3 text-xs">
-              <div>
-                <label className="block font-bold text-slate-700 uppercase mb-1">
-                  Full Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={editingApplication.fullName}
-                  onChange={(e) => setEditingApplication({ ...editingApplication, fullName: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-slate-900"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
+            <form onSubmit={handleUpdateApplication} className="space-y-3.5 text-xs">
+              {/* Full Name & Gender */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-2">
                   <label className="block font-bold text-slate-700 uppercase mb-1">
-                    Applied Post / Role *
-                  </label>
-                  <select
-                    value={editingApplication.wing}
-                    onChange={(e) => setEditingApplication({ ...editingApplication, wing: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-slate-900"
-                  >
-                    <optgroup label="District level">
-                      <option>District Director</option>
-                      <option>Districts Chief</option>
-                      <option>District Incharge</option>
-                      <option>Investigation Officer</option>
-                      <option>Information officer</option>
-                    </optgroup>
-                    <optgroup label="State level">
-                      <option>State Director</option>
-                      <option>State President</option>
-                      <option>State Incharge</option>
-                      <option>State Investigation Officer</option>
-                      <option>State Information Officer</option>
-                    </optgroup>
-                    <optgroup label="National level">
-                      <option>National Secretary</option>
-                      <option>National Investigation Officer</option>
-                      <option>National co-ordinator</option>
-                    </optgroup>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block font-bold text-slate-700 uppercase mb-1">
-                    Status *
-                  </label>
-                  <select
-                    value={editingApplication.status}
-                    onChange={(e) => setEditingApplication({ ...editingApplication, status: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-slate-900 font-semibold"
-                  >
-                    <option value="Pending Verification">Pending Verification</option>
-                    <option value="Interview Scheduled">Interview Scheduled</option>
-                    <option value="Approved">Approved</option>
-                    <option value="Rejected">Rejected</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-slate-700 uppercase mb-1">
-                    Mobile Phone *
+                    Full Name (As per Aadhaar) *
                   </label>
                   <input
                     type="text"
                     required
-                    value={editingApplication.mobile}
-                    onChange={(e) => setEditingApplication({ ...editingApplication, mobile: e.target.value })}
+                    value={editingApplication.fullName}
+                    onChange={(e) => setEditingApplication({ ...editingApplication, fullName: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-slate-900 font-semibold"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase mb-1">
+                    Gender *
+                  </label>
+                  <select
+                    value={editingApplication.gender || 'Male'}
+                    onChange={(e) => setEditingApplication({ ...editingApplication, gender: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-slate-900 font-semibold cursor-pointer focus:outline-none focus:border-[#0d47a1]"
+                  >
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Mobile Phone & Email */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase mb-1">
+                    Mobile / WhatsApp Number *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editingApplication.mobile || editingApplication.phone || ''}
+                    onChange={(e) => setEditingApplication({ ...editingApplication, mobile: e.target.value, phone: e.target.value })}
                     className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-slate-900 font-mono"
                   />
                 </div>
@@ -3242,38 +3432,174 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                   <input
                     type="email"
                     required
-                    value={editingApplication.email}
+                    value={editingApplication.email || ''}
                     onChange={(e) => setEditingApplication({ ...editingApplication, email: e.target.value })}
                     className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-slate-900 font-mono"
                   />
                 </div>
               </div>
 
+              {/* Desired Role / Designation & State Jurisdiction */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase mb-1">
+                    Desired Role / Designation *
+                  </label>
+                  <select
+                    value={editingApplication.wing || editingApplication.designation || ''}
+                    onChange={(e) => setEditingApplication({ ...editingApplication, wing: e.target.value, designation: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-slate-900 cursor-pointer focus:outline-none focus:border-[#0d47a1]"
+                  >
+                    <option value="">Select Level &amp; Designation...</option>
+                    <optgroup label="✔️ District level">
+                      <option value="District Director">1) District Director</option>
+                      <option value="Districts Chief">2) Districts Chief</option>
+                      <option value="District Incharge">3) District Incharge</option>
+                      <option value="Investigation Officer">4) Investigation Officer</option>
+                      <option value="Information officer">5) Information officer</option>
+                    </optgroup>
+                    <optgroup label="✔️ State level">
+                      <option value="State Director">1) State Director</option>
+                      <option value="State President">2) State President</option>
+                      <option value="State Incharge">3) State Incharge</option>
+                      <option value="State Investigation Officer">4) State Investigation Officer</option>
+                      <option value="State Information Officer">5) State Information Officer</option>
+                    </optgroup>
+                    <optgroup label="✔️ National level">
+                      <option value="National Secretary">1) National Secretary</option>
+                      <option value="National Investigation Officer">2) National Investigation Officer</option>
+                      <option value="National co-ordinator">3) National co-ordinator</option>
+                    </optgroup>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase mb-1">
+                    State / UT Jurisdiction *
+                  </label>
+                  <select
+                    required
+                    value={editingApplication.state || ''}
+                    onChange={(e) => setEditingApplication({ ...editingApplication, state: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-slate-900 cursor-pointer focus:outline-none focus:border-[#0d47a1]"
+                  >
+                    <option value="">Select State...</option>
+                    <option value="Delhi NCR">Delhi NCR</option>
+                    <option value="Maharashtra">Maharashtra</option>
+                    <option value="Gujarat">Gujarat</option>
+                    <option value="Uttar Pradesh">Uttar Pradesh</option>
+                    <option value="Madhya Pradesh">Madhya Pradesh</option>
+                    <option value="Bihar">Bihar</option>
+                    <option value="Karnataka">Karnataka</option>
+                    <option value="West Bengal">West Bengal</option>
+                    <option value="Tamil Nadu">Tamil Nadu</option>
+                    <option value="Rajasthan">Rajasthan</option>
+                    <option value="Other">Other State/UT</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Aadhaar / Voter ID Number & Status */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase mb-1">
+                    Aadhaar / Voter ID Number *
+                  </label>
+                  <input
+                    type="text"
+                    value={editingApplication.aadhaarNumber || editingApplication.idProofNumber || ''}
+                    onChange={(e) => setEditingApplication({ ...editingApplication, aadhaarNumber: e.target.value, idProofNumber: e.target.value })}
+                    placeholder="XXXX-XXXX-XXXX"
+                    className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-slate-900 font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase mb-1">
+                    Application Status *
+                  </label>
+                  <select
+                    value={editingApplication.status}
+                    onChange={(e) => setEditingApplication({ ...editingApplication, status: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-slate-900 font-semibold cursor-pointer focus:outline-none focus:border-[#0d47a1]"
+                  >
+                    <option value="Pending Verification">Pending Verification</option>
+                    <option value="Interview Scheduled">Interview Scheduled</option>
+                    <option value="Approved">Approved (Promote to Officers Roster)</option>
+                    <option value="Rejected">Rejected</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Assigned Badge / UID Number */}
               <div>
                 <label className="block font-bold text-slate-700 uppercase mb-1">
-                  State *
+                  Assigned Badge / UID Number (Issued upon approval)
                 </label>
                 <input
                   type="text"
-                  required
-                  value={editingApplication.state}
-                  onChange={(e) => setEditingApplication({ ...editingApplication, state: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-slate-900"
+                  value={editingApplication.assignedBadge || editingApplication.uidNumber || ''}
+                  onChange={(e) => setEditingApplication({ ...editingApplication, assignedBadge: e.target.value, uidNumber: e.target.value })}
+                  placeholder="e.g. RAWF/2026/XXXX"
+                  className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-slate-900 font-mono font-bold text-[#0d47a1]"
                 />
               </div>
 
+              {/* Photo Upload Option */}
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
+                <label className="block font-bold text-slate-700 uppercase text-[11px]">
+                  Applicant Photo (Upload or URL)
+                </label>
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-14 bg-white border-2 border-slate-300 rounded overflow-hidden shrink-0 flex items-center justify-center shadow-2xs">
+                    {editingApplication.photoUrl ? (
+                      <img src={editingApplication.photoUrl} alt="Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="material-symbols-outlined text-slate-400">person</span>
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-1.5">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = () => {
+                            setEditingApplication({ ...editingApplication, photoUrl: reader.result as string });
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                      className="block w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-[#0d47a1] file:text-white hover:file:bg-blue-900 cursor-pointer"
+                    />
+                    <input
+                      type="text"
+                      value={editingApplication.photoUrl || ''}
+                      onChange={(e) => setEditingApplication({ ...editingApplication, photoUrl: e.target.value })}
+                      placeholder="Or paste image URL: https://..."
+                      className="w-full bg-white border border-slate-300 rounded px-2 py-1 text-[11px] text-slate-900 font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Background / Motivation */}
               <div>
                 <label className="block font-bold text-slate-700 uppercase mb-1">
-                  Applicant Background Statement
+                  Professional Background / Motivation *
                 </label>
                 <textarea
-                  rows={3}
+                  rows={2}
                   value={editingApplication.background || ''}
                   onChange={(e) => setEditingApplication({ ...editingApplication, background: e.target.value })}
+                  placeholder="Summary of profession, education, and commitment to public vigilance..."
                   className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-slate-900"
                 />
               </div>
 
+              {/* Admin Notes */}
               <div>
                 <label className="block font-bold text-slate-700 uppercase mb-1">
                   Admin Internal Notes
@@ -3287,7 +3613,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                 />
               </div>
 
-              <div className="pt-2 flex justify-end gap-2">
+              <div className="pt-2 flex justify-end gap-2 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setEditingApplication(null)}
@@ -3297,9 +3623,10 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-[#0d47a1] hover:bg-blue-900 text-white rounded font-bold uppercase cursor-pointer"
+                  className="px-5 py-2 bg-[#0d47a1] hover:bg-blue-900 text-white rounded font-bold uppercase cursor-pointer shadow-xs flex items-center gap-1.5"
                 >
-                  Save Application
+                  <span className="material-symbols-outlined text-[16px]">save</span>
+                  <span>Save Application</span>
                 </button>
               </div>
             </form>
@@ -3609,6 +3936,26 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                   onChange={(e) => setNewOfficer({ ...newOfficer, mandate: e.target.value })}
                   className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-slate-900"
                 />
+              </div>
+
+              {/* Homepage Directorate Command Assignment */}
+              <div className="bg-blue-50/60 p-2.5 rounded-lg border border-blue-200">
+                <label className="flex items-center gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={newOfficer.isAssigned !== false}
+                    onChange={(e) => setNewOfficer({ ...newOfficer, isAssigned: e.target.checked })}
+                    className="w-4 h-4 text-[#0d47a1] rounded border-slate-300 focus:ring-[#0d47a1] cursor-pointer"
+                  />
+                  <div>
+                    <span className="font-bold text-slate-900 text-xs block">
+                      Assign to Homepage (Active Officers &amp; Directorate Command)
+                    </span>
+                    <span className="text-[10px] text-slate-500 block">
+                      When enabled, this newly appointed officer will be showcased on the public homepage.
+                    </span>
+                  </div>
+                </label>
               </div>
 
               <div className="pt-2 flex justify-end gap-2">

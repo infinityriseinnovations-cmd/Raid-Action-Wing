@@ -14,6 +14,10 @@ async function addDirectoryToZip(zip: JSZip, rootDir: string, currentDir: string
       zip.folder(relPath);
       await addDirectoryToZip(zip, rootDir, relPath);
     } else {
+      // Never package zip archives or giant bundle duplicates
+      if (entry.name.endsWith('.zip') || entry.name.endsWith('.tar.gz') || entry.name.endsWith('.tgz')) {
+        continue;
+      }
       const fileData = fs.readFileSync(entryFullPath);
       zip.file(relPath, fileData);
     }

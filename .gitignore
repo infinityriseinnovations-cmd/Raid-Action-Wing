@@ -6,3 +6,11 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Deployment archives & build packages (ignored to prevent GitHub 100MB file size limit error)
+*.zip
+*.tar.gz
+*.tgz
+rawf_deploy_package.zip
+public/rawf_deploy_package.zip
+cpanel_deploy_package/

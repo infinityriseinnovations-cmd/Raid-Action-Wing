@@ -1,154 +1,212 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { RawfLogo } from './RawfLogo';
 
-interface Officer {
-  id: string;
+export interface DirectoryOfficer {
+  id: string | number;
   name: string;
   designation: string;
-  division: 'national' | 'state' | 'legal';
+  division?: string;
   state: string;
-  status: 'ACTIVE' | 'VERIFIED' | 'COMMAND';
-  badgeNumber: string;
-  photoUrl: string;
-  tagText: string;
-  tagColor: 'amber' | 'blue' | 'red';
+  status?: string;
+  badgeNumber?: string;
+  uidNumber?: string;
+  photoUrl?: string;
+  tagText?: string;
+  tagColor?: 'amber' | 'blue' | 'red';
+  isAssigned?: boolean;
 }
-
-const officersList: Officer[] = [
-  {
-    id: 'DG-CRIME-001',
-    name: 'Manoj Chauhan',
-    designation: 'Director General (Crime & Vigilance Cell)',
-    division: 'national',
-    state: 'National HQ - New Delhi',
-    status: 'COMMAND',
-    badgeNumber: 'DG-CRIME-001',
-    photoUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDUm1YEgLpksGzi3w_3gvQPMzQHxeJlPGIDPYSLpaJCRKoYNLLGbcUdrCUKoSaRyfEzL4ATnteKP2TfyzfoAVh1i5Kpa_VmIijrnduQpaY8f3zG3WoGPNJrVYlAkNW10Af4Sgz53Lwkm1nL1Xp2RSJO1N4pId9Ml-OLibxjnYl8ahmBmrReo3ewBqIGmPn5k_MsnyohwJdt7FnnDgVW2dEYGojLicyUTmbxn8Iv-d5fNMODD99vAKO6VQ',
-    tagText: 'DG RAWF',
-    tagColor: 'amber'
-  },
-  {
-    id: 'RW-MH-102',
-    name: 'Sushant Prakash Kagale',
-    designation: 'National Investigation Officer (Maharashtra)',
-    division: 'state',
-    state: 'Maharashtra',
-    status: 'ACTIVE',
-    badgeNumber: 'RW-MH-102',
-    photoUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBMjYeqo0GQGnnVCALTm2YL_ZT1q7UGxG2MHvI0ielMI02SoUfp7g5QqGw__jl2OI9rA6Sv7mczVS2AZSCpxLLApzP9k-GtQQkvcolLJEFLEn0q_ekfnD6hgQW9uX27XF-4IqmYs9v8KrBoJj0nd7Mgd7W5UZ7LU4SxmYgLpGLDoXV0NEAzysp4ytUcxU2NpgRsfAfdOKxindrSxiH2jWNtLsPPEuyWASR5qtfoQHOTyXE9qVDMTYNK9g',
-    tagText: 'MAHARASHTRA',
-    tagColor: 'blue'
-  },
-  {
-    id: 'RW-GJ-104',
-    name: 'Vipul Harshad Bhai Dave',
-    designation: 'State Director (Gujarat)',
-    division: 'state',
-    state: 'Gujarat',
-    status: 'ACTIVE',
-    badgeNumber: 'RW-GJ-104',
-    photoUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD9LpEKtygMH9hqnG8rn8G5GMkabb623q08xiOT4fExKQpAxmXfMBqx50Q421-RJs_RA4EwXpnpRV1vaqisuY9ShWwE_-dlHHp_l7H0umSi-j2VgHBzJmVoOA8AM1QY53nkZJcjRhWa6zUi3jLx9E8P0TfWFCBiNT_4FHSL3zDAFwlNVyyRoC8-tqz0zakISnTxT5kgus_OER8csHXvPU8wcfGQAr0q3CJFHyqhjWApzxGyKoGWR4AVzg',
-    tagText: 'GUJARAT',
-    tagColor: 'blue'
-  },
-  {
-    id: 'RW-MP-105',
-    name: 'Rajesh Shrawan',
-    designation: 'State Director (Madhya Pradesh)',
-    division: 'state',
-    state: 'Madhya Pradesh',
-    status: 'ACTIVE',
-    badgeNumber: 'RW-MP-105',
-    photoUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCzjOJW-0F9kQafL4EqjRAyrLWNV05ZyFI-1wCYRNv9TdnD9-FDOP2WWAjXCkijW26gHb1QNBYfsumpnqHE-Z_PIJjl6A482Zztt2P-Ikxhz3VDSd-hvdGvGBH4yMSpa9Tgze_hoLkmCGJOLdcGpmyxTHe1NkZPopjqRLXPL0dV1a2pl7Z7Ck625nGGdUd4MkhaYG8syU4ZgRlQmgy9bWL1wQ6MhVeIWtYqPxpx4ChjMP1qVWRXnZMwcQ',
-    tagText: 'MADHYA PRADESH',
-    tagColor: 'blue'
-  },
-  {
-    id: 'RW-NAT-W01',
-    name: 'Phalguni Dutta Halder',
-    designation: 'National Secretary (Women Cell)',
-    division: 'national',
-    state: 'National HQ & Eastern Region',
-    status: 'VERIFIED',
-    badgeNumber: 'RW-NAT-W01',
-    photoUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBXFCKE0UX1utOq5DO1VETiwFFYnVuSBEzgwYvyQMsWJwudqom0fj2Hqe7nJMb5IgAf69rwxqcNoZp1AP4JyU1D3DCT42-kalWCBy2XsjlAlP0yDcmnKsxE3xIQ70-bRGNOY_HUXW0kNVO_8LkJysii3DdNQvHuvsjtPFboGrTQ69CMmDUexMKUTIwitMNzdhHpeMz_lA9FCuZBBE-5jm3374Mgi1nD1bSxEwkEKPAMdHfMnlpoOWhCmA',
-    tagText: 'WOMEN CELL',
-    tagColor: 'red'
-  },
-  {
-    id: 'RW-LEG-001',
-    name: 'Shekhar Kumar Nigam',
-    designation: 'Chief Legal Advisor & Advocate',
-    division: 'legal',
-    state: 'Supreme Court & High Courts',
-    status: 'VERIFIED',
-    badgeNumber: 'RW-LEG-001',
-    photoUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBKBCimjG0t1Psi8NaW5y8ZgGe-tVqjZvwsrTMqXJxoHOnsCBW5xp-MEf3kF0BUVI13eU257ZEk5qleDMl-E8-NJyRLA8QXgv87iz2Dmx-cVK15KP9s1NnOfjkkwFhSrq5tOIVOSbqgtI3uGEiXcm-ZVJW3N25MAS-_to6BIFBpa3YVexuhBluhv_4Ws9_slKeyV6QwyacnImqe_0E_7gI8gwvpD-TnyhFzs8d6atjcHjuZucvfY_hl7Q',
-    tagText: 'LEGAL DESK',
-    tagColor: 'amber'
-  },
-  {
-    id: 'RW-NAT-002',
-    name: 'Vishal Nain',
-    designation: 'National Deputy Director (India)',
-    division: 'national',
-    state: 'National HQ',
-    status: 'ACTIVE',
-    badgeNumber: 'RW-NAT-002',
-    photoUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDGi_EgkVKseLfKV27C6HTcNJHIos7qqFDnbT4fbIYckiKs7pgl9QqMBfBTowT-k04KyQblyZl1sjwPyxJzShvNe522AAL5s7eavqteLF80e8tSGaKMDqj-RRKkeVonrebNxuQXeH-52UjEsTMig7eYQSECi4-3gXwKd87FTziON3_mdC6kLlrxnapbxyZsYZ1S16n8-0JJMPgGJqQyITxFHRjUe0JhVOSybtlqvMOVbT_dYawEhfuWXw',
-    tagText: 'DEP DIRECTOR',
-    tagColor: 'blue'
-  },
-  {
-    id: 'RW-UP-106',
-    name: 'Subedar Saroj / Ajay Kumar',
-    designation: 'State Incharges (Uttar Pradesh)',
-    division: 'state',
-    state: 'Uttar Pradesh',
-    status: 'ACTIVE',
-    badgeNumber: 'RW-UP-106',
-    photoUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCmZOpfbug19sIOaInPooKLlPo4DYXaV5nnLv02DzRz_QArFJv5Q-1t2gcJEeD5koEUm6UnK-kn1cyEhQvbNXaLWzSEQyXtP3Jtbb0T8Elu-_riLzGqfiIvwj1uiwzvtfozNAXJizD7PouYEdKymX0-LmpzGs3T-hwi8EXEEwOisQDkfNyhOfVKzlXwRz7iVCIn7eF3eLrqYbVfDzq9ur6fypCfinXowr1DIu_NdhigHdqEVtmhC_h8Vw',
-    tagText: 'UTTAR PRADESH',
-    tagColor: 'blue'
-  }
-];
 
 interface OfficersDirectoryProps {
   onVerifyOfficer: (badgeId: string) => void;
 }
 
+const mapOfficerRecord = (o: any): DirectoryOfficer => {
+  const displayUid = o.uidNumber || o.badgeNumber || String(o.id || '');
+  const stateStr = o.state || 'National HQ';
+  const tag = o.tagText || (stateStr ? stateStr.split(/[-–,]/)[0].trim().toUpperCase() : 'COMMAND');
+
+  return {
+    id: o.id || displayUid,
+    name: o.name || o.fullName || 'Officer',
+    designation: o.designation || 'Field Officer',
+    division: o.division || 'state',
+    state: stateStr,
+    status: o.status || 'ACTIVE',
+    badgeNumber: displayUid,
+    uidNumber: displayUid,
+    photoUrl: o.photoUrl || '',
+    tagText: tag,
+    tagColor: o.division === 'legal' ? 'amber' : o.status === 'COMMAND' ? 'amber' : 'blue',
+    isAssigned: o.isAssigned !== false && o.assigned !== false
+  };
+};
+
 export const OfficersDirectory: React.FC<OfficersDirectoryProps> = ({ onVerifyOfficer }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterTab, setFilterTab] = useState<'all' | 'national' | 'state' | 'legal'>('all');
   const [showBlacklistModal, setShowBlacklistModal] = useState(false);
 
+  // Initialize ONLY from actual active officers stored in roster
+  const [officersList, setOfficersList] = useState<DirectoryOfficer[]>(() => {
+    try {
+      const saved = localStorage.getItem('rawf_data_officers');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const assignedOnly = parsed
+            .filter((o: any) => o.isAssigned === true || (o.isAssigned !== false && o.assigned !== false))
+            .map(mapOfficerRecord);
+          return assignedOnly;
+        }
+      }
+    } catch {}
+
+    // Fallback to real roster defaults if initial storage empty
+    return [
+      mapOfficerRecord({
+        id: 'RAWF/2026/1376',
+        uidNumber: 'RAWF/2026/1376',
+        badgeNumber: 'RAWF/2026/1376',
+        name: 'Andrew Paul',
+        designation: 'District Special Officer',
+        division: 'state',
+        state: 'Tamil Nadu',
+        status: 'ACTIVE',
+        photoUrl: '',
+        isAssigned: true
+      })
+    ];
+  });
+
+  // Dynamically synchronize assigned officers strictly from the active roster
+  useEffect(() => {
+    const syncAssignedOfficers = async () => {
+      try {
+        let activeRoster: any[] = [];
+
+        // 1. Primary Source of Truth: Active Officers Roster in Local Storage
+        const localSaved = localStorage.getItem('rawf_data_officers');
+        if (localSaved) {
+          const parsed = JSON.parse(localSaved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            activeRoster = parsed;
+          }
+        }
+
+        // 2. Secondary check: Fetch from server API
+        try {
+          const res = await fetch('/api/officers');
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+              if (activeRoster.length === 0) {
+                activeRoster = data.data;
+              } else {
+                activeRoster = activeRoster.map((localOff) => {
+                  const match = data.data.find(
+                    (s: any) =>
+                      String(s.uidNumber || s.id).toUpperCase() ===
+                      String(localOff.uidNumber || localOff.id).toUpperCase()
+                  );
+                  return match ? { ...localOff, ...match, photoUrl: localOff.photoUrl || match.photoUrl } : localOff;
+                });
+              }
+            }
+          }
+        } catch {}
+
+        if (activeRoster.length > 0) {
+          const assignedOnly = activeRoster
+            .filter((o) => {
+              const isAssigned = o.isAssigned === true || (o.isAssigned !== false && o.assigned !== false);
+              const isNotRevoked = o.status !== 'REVOKED & BLACKLISTED';
+              return isAssigned && isNotRevoked;
+            })
+            .map(mapOfficerRecord);
+
+          setOfficersList(assignedOnly);
+        } else {
+          setOfficersList([]);
+        }
+      } catch (err) {
+        console.warn('Error syncing assigned officers:', err);
+      }
+    };
+
+    syncAssignedOfficers();
+
+    const handleUpdate = () => syncAssignedOfficers();
+    window.addEventListener('rawf_officers_updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    return () => {
+      window.removeEventListener('rawf_officers_updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+    };
+  }, []);
+
+  // Single Director General (Crime & Vigilance Cell) Supreme Commander
+  const directorGeneral = useMemo(() => {
+    const foundInRoster = officersList.find(
+      (o) =>
+        o.designation.toLowerCase().includes('director general') ||
+        (o.uidNumber && o.uidNumber.toUpperCase().includes('DG-CRIME')) ||
+        (o.badgeNumber && o.badgeNumber.toUpperCase().includes('DG-CRIME'))
+    );
+    if (foundInRoster) return foundInRoster;
+
+    return {
+      id: 'DG-CRIME-001',
+      uidNumber: 'DG-CRIME-001',
+      badgeNumber: 'DG-CRIME-001',
+      name: 'Manoj Chauhan',
+      designation: 'Director General (Crime & Vigilance Cell)',
+      division: 'national',
+      state: 'National HQ - New Delhi',
+      status: 'COMMAND',
+      photoUrl:
+        'https://lh3.googleusercontent.com/aida-public/AB6AXuDUm1YEgLpksGzi3w_3gvQPMzQHxeJlPGIDPYSLpaJCRKoYNLLGbcUdrCUKoSaRyfEzL4ATnteKP2TfyzfoAVh1i5Kpa_VmIijrnduQpaY8f3zG3WoGPNJrVYlAkNW10Af4Sgz53Lwkm1nL1Xp2RSJO1N4pId9Ml-OLibxjnYl8ahmBmrReo3ewBqIGmPn5k_MsnyohwJdt7FnnDgVW2dEYGojLicyUTmbxn8Iv-d5fNMODD99vAKO6VQ',
+      tagText: 'DG RAWF',
+      tagColor: 'amber' as const,
+      isAssigned: true
+    };
+  }, [officersList]);
+
+  // Assigned Subordinate / Field Officers (excluding Director General to avoid duplication)
+  const subordinateOfficers = useMemo(() => {
+    return officersList.filter(
+      (o) =>
+        !o.designation.toLowerCase().includes('director general') &&
+        o.uidNumber !== directorGeneral.uidNumber &&
+        o.badgeNumber !== directorGeneral.badgeNumber
+    );
+  }, [officersList, directorGeneral]);
+
   const filteredOfficers = useMemo(() => {
-    return officersList.filter((officer) => {
-      const matchesFilter = filterTab === 'all' || officer.division === filterTab;
-      const q = searchQuery.toLowerCase();
-      const matchesSearch =
-        !q ||
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return subordinateOfficers;
+    return subordinateOfficers.filter((officer) => {
+      return (
         officer.name.toLowerCase().includes(q) ||
         officer.designation.toLowerCase().includes(q) ||
         officer.state.toLowerCase().includes(q) ||
-        officer.badgeNumber.toLowerCase().includes(q);
-
-      return matchesFilter && matchesSearch;
+        (officer.badgeNumber && officer.badgeNumber.toLowerCase().includes(q)) ||
+        (officer.uidNumber && officer.uidNumber.toLowerCase().includes(q))
+      );
     });
-  }, [searchQuery, filterTab]);
+  }, [searchQuery, subordinateOfficers]);
 
   return (
     <section className="w-full bg-white py-14 px-4 lg:px-8 border-b border-slate-200" id="officers">
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="max-w-7xl mx-auto space-y-7">
+        {/* Section Header */}
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 border-b border-slate-200 pb-4">
           <div className="flex items-center gap-3">
             <RawfLogo className="w-10 h-10" />
             <div>
               <span className="text-xs font-bold uppercase tracking-widest text-red-600 block">
-                Official Roster & Anti-Fraud System
+                Official Roster &amp; Anti-Fraud System
               </span>
               <h2 className="font-headline font-bold text-2xl lg:text-3xl text-slate-900 uppercase tracking-tight">
-                Active Officers & Directorate Command
+                Active Officers &amp; Directorate Command
               </h2>
             </div>
           </div>
@@ -165,9 +223,134 @@ export const OfficersDirectory: React.FC<OfficersDirectoryProps> = ({ onVerifyOf
           </div>
         </div>
 
-        {/* Search & Filter Controls */}
-        <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 flex flex-col md:flex-row items-center gap-3">
-          <div className="relative w-full md:flex-1">
+        {/* ============================================================== */}
+        {/* APEX COMMAND: DIRECTOR GENERAL (CRIME & VIGILANCE CELL)         */}
+        {/* Displayed prominently above the search box                     */}
+        {/* ============================================================== */}
+        <div className="relative overflow-hidden rounded-2xl border-2 border-amber-500/50 bg-gradient-to-br from-slate-950 via-[#071d3a] to-[#0a2540] text-white p-5 sm:p-7 shadow-xl shadow-slate-950/20">
+          {/* Subtle Ambient Radial Glow */}
+          <div className="absolute top-0 right-0 -mt-10 -mr-10 w-72 h-72 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
+          <div className="absolute bottom-0 left-1/3 -mb-10 w-80 h-36 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
+
+          {/* Top Header Bar */}
+          <div className="relative z-10 flex flex-wrap items-center justify-between gap-2 border-b border-amber-500/20 pb-3 mb-5">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-amber-400 text-lg">military_tech</span>
+              <span className="font-mono text-[11px] sm:text-xs font-black tracking-widest text-amber-400 uppercase">
+                Supreme Directorate Command • Apex Oversight
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 px-2.5 py-0.5 rounded-full font-mono text-[10px] font-bold inline-flex items-center gap-1.5 shadow-2xs">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                ACTIVE IN SERVICE
+              </span>
+              <span className="bg-amber-500/20 border border-amber-400/40 text-amber-300 px-2.5 py-0.5 rounded font-mono text-[10px] font-bold uppercase">
+                NATIONAL HQ
+              </span>
+            </div>
+          </div>
+
+          {/* Commander Profile Layout */}
+          <div className="relative z-10 flex flex-col md:flex-row items-center md:items-start gap-6">
+            {/* Commander Photo with Executive Gold Frame */}
+            <div className="relative shrink-0 group">
+              <div className="relative w-32 h-40 sm:w-36 sm:h-44 rounded-xl overflow-hidden border-2 border-amber-400/80 shadow-2xl bg-slate-900 ring-4 ring-amber-400/20">
+                {directorGeneral.photoUrl ? (
+                  <img
+                    src={directorGeneral.photoUrl}
+                    alt={directorGeneral.name}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 pointer-events-none select-none"
+                    onError={(e) => {
+                      const target = e.currentTarget as HTMLImageElement;
+                      target.style.display = 'none';
+                      const fallback = target.parentElement?.querySelector('[data-dg-avatar-fallback]');
+                      if (fallback) (fallback as HTMLElement).style.display = 'flex';
+                    }}
+                  />
+                ) : null}
+                <div
+                  data-dg-avatar-fallback="true"
+                  style={{ display: directorGeneral.photoUrl ? 'none' : 'flex' }}
+                  className="w-full h-full flex flex-col items-center justify-center bg-slate-900 text-amber-300/70 p-2 text-center"
+                >
+                  <span className="material-symbols-outlined text-5xl">shield_person</span>
+                  <span className="text-[10px] font-mono font-bold uppercase mt-1">DIRECTOR GENERAL</span>
+                </div>
+
+                {/* Bottom Gold Ribbon */}
+                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 text-slate-950 font-mono text-[9px] font-black uppercase text-center py-0.5 tracking-wider shadow-md">
+                  DG • SUPREME COMMAND
+                </div>
+              </div>
+
+              {/* Floating Shield Seal */}
+              <div className="absolute -bottom-2 -right-2 bg-slate-950 border-2 border-amber-400 rounded-full p-1 shadow-lg text-amber-400 flex items-center justify-center">
+                <span className="material-symbols-outlined text-[18px]">verified</span>
+              </div>
+            </div>
+
+            {/* Officer Details & Authority */}
+            <div className="flex-1 text-center md:text-left space-y-3">
+              <div>
+                <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-1">
+                  <span className="font-mono text-xs font-bold text-amber-300 bg-amber-400/10 border border-amber-400/30 px-2 py-0.5 rounded">
+                    UID: {directorGeneral.uidNumber || directorGeneral.badgeNumber}
+                  </span>
+                  <span className="text-[11px] font-mono text-slate-400">
+                    Tenure: 2021 – 2028 (Statutory Active)
+                  </span>
+                </div>
+                <h3 className="font-headline font-black text-2xl sm:text-3xl text-white uppercase tracking-tight">
+                  {directorGeneral.name}
+                </h3>
+                <p className="text-amber-300 font-bold text-sm sm:text-base mt-0.5 flex items-center justify-center md:justify-start gap-1.5">
+                  <span className="material-symbols-outlined text-[18px] text-amber-400">workspace_premium</span>
+                  <span>Director General (Crime &amp; Vigilance Cell)</span>
+                </p>
+                <span className="text-xs text-slate-300 flex items-center justify-center md:justify-start gap-1.5 mt-1 font-medium">
+                  <span className="material-symbols-outlined text-[15px] text-amber-400">assured_workload</span>
+                  <span>National Supreme Command • New Delhi HQ</span>
+                </span>
+              </div>
+
+              {/* Mandate Description */}
+              <div className="bg-slate-900/60 border-l-3 border-amber-400 rounded-r-lg p-3 text-xs text-slate-200/90 leading-relaxed text-left">
+                <strong className="text-amber-300 block font-mono text-[10px] uppercase mb-0.5">
+                  Official Statutory Mandate:
+                </strong>
+                Overseeing nationwide whistleblower integrity protocols, inter-state vigilance taskforces, public fraud eradication, and statutory escalation to CBI, ED, and statutory vigilance tribunals.
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-1 flex flex-wrap items-center justify-center md:justify-start gap-2.5">
+                <button
+                  onClick={() => onVerifyOfficer(directorGeneral.uidNumber || directorGeneral.badgeNumber || 'DG-CRIME-001')}
+                  className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs uppercase rounded transition-all shadow-md inline-flex items-center gap-1.5 cursor-pointer"
+                  aria-label={`Verify credentials for Director General ${directorGeneral.name}`}
+                >
+                  <span className="material-symbols-outlined text-[16px]">verified_user</span>
+                  <span>Verify DG Credentials</span>
+                </button>
+
+                <a
+                  href="#grievance"
+                  className="px-3.5 py-2 bg-white/10 hover:bg-white/20 text-white border border-white/20 rounded font-bold text-xs uppercase transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[16px]">campaign</span>
+                  <span>Direct Escalation to DG Desk</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ============================================================== */}
+        {/* SEARCH BOX & ACTIVE FIELD OFFICERS SECTION                     */}
+        {/* Placed immediately below the Director General card             */}
+        {/* ============================================================== */}
+        <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="relative w-full sm:flex-1">
             <span className="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-[18px]">
               search
             </span>
@@ -175,135 +358,114 @@ export const OfficersDirectory: React.FC<OfficersDirectoryProps> = ({ onVerifyOf
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Filter by Name, State (Maharashtra, Gujarat, Uttar Pradesh...), or Designation"
+              placeholder="Search assigned officers by Name, State (Tamil Nadu, Maharashtra...), or Designation..."
               aria-label="Filter roster by Name, State, or Designation"
               className="w-full bg-white border border-slate-300 rounded pl-10 pr-4 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0d47a1] placeholder:text-slate-400"
             />
           </div>
-
-          <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0" role="tablist" aria-label="Officer division filters">
-            <button
-              onClick={() => setFilterTab('all')}
-              aria-label={`View all roster of ${officersList.length} officers`}
-              aria-pressed={filterTab === 'all'}
-              className={`px-3 py-2 rounded font-bold text-xs uppercase transition-colors cursor-pointer whitespace-nowrap ${
-                filterTab === 'all'
-                  ? 'bg-[#0d47a1] text-white shadow-xs'
-                  : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-300'
-              }`}
-            >
-              All Roster ({officersList.length})
-            </button>
-            <button
-              onClick={() => setFilterTab('national')}
-              aria-label="Filter by National Command"
-              aria-pressed={filterTab === 'national'}
-              className={`px-3 py-2 rounded font-bold text-xs uppercase transition-colors cursor-pointer whitespace-nowrap ${
-                filterTab === 'national'
-                  ? 'bg-[#0d47a1] text-white shadow-xs'
-                  : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-300'
-              }`}
-            >
-              National Command
-            </button>
-            <button
-              onClick={() => setFilterTab('state')}
-              aria-label="Filter by State Directors"
-              aria-pressed={filterTab === 'state'}
-              className={`px-3 py-2 rounded font-bold text-xs uppercase transition-colors cursor-pointer whitespace-nowrap ${
-                filterTab === 'state'
-                  ? 'bg-[#0d47a1] text-white shadow-xs'
-                  : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-300'
-              }`}
-            >
-              State Directors
-            </button>
-            <button
-              onClick={() => setFilterTab('legal')}
-              aria-label="Filter by Legal Council"
-              aria-pressed={filterTab === 'legal'}
-              className={`px-3 py-2 rounded font-bold text-xs uppercase transition-colors cursor-pointer whitespace-nowrap ${
-                filterTab === 'legal'
-                  ? 'bg-[#0d47a1] text-white shadow-xs'
-                  : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-300'
-              }`}
-            >
-              Legal Council
-            </button>
+          <div className="text-xs font-mono font-bold text-slate-600 uppercase whitespace-nowrap px-2">
+            Assigned Field Officers: <span className="text-[#0d47a1]">{filteredOfficers.length}</span> {filteredOfficers.length === 1 ? 'Officer' : 'Officers'}
           </div>
         </div>
 
-        {/* Officer Cards Bento Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-          {filteredOfficers.map((officer) => (
-            <div
-              key={officer.id}
-              className="bg-white border-2 border-slate-200 rounded-lg p-4 flex flex-col justify-between hover:border-[#0d47a1] hover:shadow-md transition-all group"
-            >
-              <div className="space-y-3">
-                <div className="relative aspect-square w-full bg-slate-100 rounded overflow-hidden border border-slate-200" data-nosnippet>
-                  <img
-                    src={officer.photoUrl}
-                    alt="Official RAWF Personnel"
-                    data-nosnippet
-                    className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-300 pointer-events-none select-none"
-                    onContextMenu={(e) => e.preventDefault()}
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).src = '/rawf-logo.jpg';
-                    }}
-                  />
-                  <div
-                    className={`absolute top-2 right-2 px-2 py-0.5 font-mono text-[9px] font-bold uppercase rounded shadow-2xs ${
-                      officer.tagColor === 'amber'
-                        ? 'bg-amber-500 text-white'
-                        : officer.tagColor === 'red'
-                        ? 'bg-red-600 text-white'
-                        : 'bg-blue-600 text-white'
-                    }`}
-                  >
-                    {officer.tagText}
+        {/* Officer Cards Grid - Assigned Field Officers */}
+        {filteredOfficers.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+            {filteredOfficers.map((officer) => {
+              const displayBadge = officer.uidNumber || officer.badgeNumber || String(officer.id);
+              return (
+                <div
+                  key={officer.id}
+                  className="bg-white border-2 border-slate-200 rounded-lg p-4 flex flex-col justify-between hover:border-[#0d47a1] hover:shadow-md transition-all group"
+                >
+                  <div className="space-y-3">
+                    <div className="relative aspect-square w-full bg-slate-100 rounded overflow-hidden border border-slate-200" data-nosnippet>
+                      {officer.photoUrl ? (
+                        <img
+                          src={officer.photoUrl}
+                          alt={`Official RAWF Personnel ${officer.name}`}
+                          data-nosnippet
+                          className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-300 pointer-events-none select-none"
+                          onContextMenu={(e) => e.preventDefault()}
+                          onError={(e) => {
+                            const target = e.currentTarget as HTMLImageElement;
+                            target.style.display = 'none';
+                            const fallback = target.parentElement?.querySelector('[data-card-avatar-fallback]');
+                            if (fallback) (fallback as HTMLElement).style.display = 'flex';
+                          }}
+                        />
+                      ) : null}
+                      <div
+                        data-card-avatar-fallback="true"
+                        style={{ display: officer.photoUrl ? 'none' : 'flex' }}
+                        className="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-slate-400 p-2 text-center"
+                      >
+                        <span className="material-symbols-outlined text-[54px] text-slate-400 notranslate select-none">
+                          person
+                        </span>
+                        <span className="text-[9px] font-mono uppercase font-bold text-slate-500 mt-1 select-none">
+                          RAWF OFFICER
+                        </span>
+                      </div>
+
+                      <div
+                        className={`absolute top-2 right-2 px-2 py-0.5 font-mono text-[9px] font-bold uppercase rounded shadow-2xs ${
+                          officer.tagColor === 'amber'
+                            ? 'bg-amber-500 text-white'
+                            : officer.tagColor === 'red'
+                            ? 'bg-red-600 text-white'
+                            : 'bg-blue-600 text-white'
+                        }`}
+                      >
+                        {officer.tagText || 'OFFICER'}
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="font-mono text-[10px] text-slate-400 uppercase block font-semibold">
+                        {displayBadge}
+                      </span>
+                      <h4 className="font-headline font-bold text-slate-900 text-base group-hover:text-[#0d47a1] transition-colors">
+                        {officer.name}
+                      </h4>
+                      <p className="text-xs text-slate-600 leading-tight mt-0.5">
+                        {officer.designation}
+                      </p>
+                      <span className="text-[11px] text-slate-500 block mt-1">
+                        {officer.state}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-slate-100 mt-3 flex justify-between items-center text-[10px] font-mono">
+                    <span className="text-emerald-700 font-bold flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                      {officer.status || 'ACTIVE'}
+                    </span>
+
+                    <button
+                      onClick={() => onVerifyOfficer(displayBadge)}
+                      className="px-2 py-1 bg-slate-100 hover:bg-[#0d47a1] hover:text-white rounded text-slate-700 font-bold uppercase transition-colors cursor-pointer"
+                      aria-label={`Verify badge credentials for ${officer.name}`}
+                    >
+                      Verify Badge
+                    </button>
                   </div>
                 </div>
-
-                <div>
-                  <span className="font-mono text-[10px] text-slate-400 uppercase block font-semibold">
-                    {officer.badgeNumber}
-                  </span>
-                  <h4 className="font-headline font-bold text-slate-900 text-base group-hover:text-[#0d47a1] transition-colors">
-                    {officer.name}
-                  </h4>
-                  <p className="text-xs text-slate-600 leading-tight mt-0.5">
-                    {officer.designation}
-                  </p>
-                  <span className="text-[11px] text-slate-500 block mt-1">
-                    {officer.state}
-                  </span>
-                </div>
-              </div>
-
-              <div className="pt-3 border-t border-slate-100 mt-3 flex justify-between items-center text-[10px] font-mono">
-                <span className="text-emerald-700 font-bold flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                  {officer.status}
-                </span>
-
-                <button
-                  onClick={() => onVerifyOfficer(officer.badgeNumber)}
-                  className="px-2 py-1 bg-slate-100 hover:bg-[#0d47a1] hover:text-white rounded text-slate-700 font-bold uppercase transition-colors cursor-pointer"
-                  aria-label={`Verify badge credentials for ${officer.name}`}
-                >
-                  Verify Badge
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {filteredOfficers.length === 0 && (
-          <div className="text-center py-12 bg-slate-50 rounded-lg border border-slate-200">
-            <span className="material-symbols-outlined text-4xl text-slate-400">person_search</span>
-            <h4 className="font-bold text-slate-800 text-sm mt-2">No matching officers found</h4>
-            <p className="text-xs text-slate-500 mt-1">Try a different name, state or designation keyword.</p>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-14 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
+            <span className="material-symbols-outlined text-4xl text-slate-400">shield_person</span>
+            <h4 className="font-bold text-slate-800 text-sm">
+              {searchQuery ? 'No matching field officers found' : 'No Additional Field Officers Assigned'}
+            </h4>
+            <p className="text-xs text-slate-500 max-w-md mx-auto">
+              {searchQuery
+                ? 'Try a different name, state, or designation keyword.'
+                : 'Any field officers assigned in the National Active Officers Roster via the Command Admin Console will be showcased here.'}
+            </p>
           </div>
         )}
       </div>
@@ -323,7 +485,7 @@ export const OfficersDirectory: React.FC<OfficersDirectoryProps> = ({ onVerifyOf
             <div className="flex items-center gap-2 text-red-600 border-b border-slate-100 pb-3">
               <span className="material-symbols-outlined text-2xl">warning</span>
               <h3 id="blacklist-modal-title" className="font-headline font-bold text-lg text-slate-900">
-                Official Revocation & Anti-Impersonation Notice
+                Official Revocation &amp; Anti-Impersonation Notice
               </h3>
             </div>
 

@@ -851,6 +851,45 @@ if ($route === 'officers/verify' || $route === 'officer/verify') {
                 break;
             }
         }
+
+        if (!$officer) {
+            $defaultOfficers = [
+                [
+                    'id' => 'DG-CRIME-001',
+                    'uidNumber' => 'DG-CRIME-001',
+                    'badgeNumber' => 'DG-CRIME-001',
+                    'name' => 'Manoj Chauhan',
+                    'designation' => 'Director General (Crime & Vigilance Cell)',
+                    'division' => 'national',
+                    'state' => 'National HQ - New Delhi',
+                    'status' => 'COMMAND',
+                    'validTill' => '31-DEC-2028',
+                    'mandate' => 'Supreme statutory oversight, nationwide whistleblower defense, and anti-corruption field taskforce coordination under Bharatiya Nyaya Sanhita (BNS).',
+                    'photoUrl' => 'https://lh3.googleusercontent.com/aida-public/AB6AXuDUm1YEgLpksGzi3w_3gvQPMzQHxeJlPGIDPYSLpaJCRKoYNLLGbcUdrCUKoSaRyfEzL4ATnteKP2TfyzfoAVh1i5Kpa_VmIijrnduQpaY8f3zG3WoGPNJrVYlAkNW10Af4Sgz53Lwkm1nL1Xp2RSJO1N4pId9Ml-OLibxjnYl8ahmBmrReo3ewBqIGmPn5k_MsnyohwJdt7FnnDgVW2dEYGojLicyUTmbxn8Iv-d5fNMODD99vAKO6VQ'
+                ],
+                [
+                    'id' => 'RAWF/2026/1376',
+                    'uidNumber' => 'RAWF/2026/1376',
+                    'badgeNumber' => 'RAWF/2026/1376',
+                    'name' => 'Andrew Paul',
+                    'designation' => 'District Special Officer',
+                    'division' => 'state',
+                    'state' => 'Tamil Nadu',
+                    'status' => 'ACTIVE',
+                    'validTill' => '11-09-2027',
+                    'mandate' => 'District Vigilance & Field Taskforce Enforcement',
+                    'photoUrl' => ''
+                ]
+            ];
+            foreach ($defaultOfficers as $dOff) {
+                $u = strtoupper($dOff['uidNumber']);
+                $n = strtoupper($dOff['name']);
+                if ($u === $cleanCode || stripos($cleanCode, $u) !== false || $n === $cleanCode || stripos($n, $cleanCode) !== false) {
+                    $officer = $dOff;
+                    break;
+                }
+            }
+        }
     }
 
     if ($officer) {
@@ -983,7 +1022,8 @@ if ($routeParts[0] === 'admin' && isset($routeParts[1]) && $routeParts[1] === 'o
             'email' => $email,
             'photoUrl' => $photoUrl,
             'mandate' => $mandate,
-            'status' => 'ACTIVE'
+            'status' => 'ACTIVE',
+            'isAssigned' => isset($input['isAssigned']) ? (bool)$input['isAssigned'] : true
         ];
 
         if ($pdo) {

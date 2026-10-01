@@ -27,6 +27,7 @@ export interface Officer {
   photoUrl: string;
   validTill: string;
   mandate: string;
+  isAssigned?: boolean;
 }
 
 export interface GrievanceRecord {
@@ -108,25 +109,8 @@ export interface ActivityRecord {
   createdAt?: string;
 }
 
-// In-Memory Database (Seeded with official directory records)
+// In-Memory Database (Synchronized with official directory records)
 const officersDatabase: Officer[] = [
-  {
-    id: 'RAWF/2026/1995',
-    uidNumber: 'RAWF/2026/1995',
-    badgeNumber: 'RAWF/2026/1995',
-    name: 'Akshay Vilas Patil',
-    dob: '20/12/1995',
-    joinDate: '11-SEP-2024',
-    phoneContact: '+91 98200 45678',
-    email: 'akshay.patil@raidactionwing.in',
-    designation: 'District Special Officer',
-    division: 'state',
-    state: 'Maharashtra',
-    status: 'ACTIVE',
-    photoUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDUm1YEgLpksGzi3w_3gvQPMzQHxeJlPGIDPYSLpaJCRKoYNLLGbcUdrCUKoSaRyfEzL4ATnteKP2TfyzfoAVh1i5Kpa_VmIijrnduQpaY8f3zG3WoGPNJrVYlAkNW10Af4Sgz53Lwkm1nL1Xp2RSJO1N4pId9Ml-OLibxjnYl8ahmBmrReo3ewBqIGmPn5k_MsnyohwJdt7FnnDgVW2dEYGojLicyUTmbxn8Iv-d5fNMODD99vAKO6VQ',
-    validTill: '11-09-2027',
-    mandate: 'District Vigilance & Field Taskforce Enforcement'
-  },
   {
     id: 'DG-CRIME-001',
     uidNumber: 'DG-CRIME-001',
@@ -142,128 +126,40 @@ const officersDatabase: Officer[] = [
     status: 'COMMAND',
     photoUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDUm1YEgLpksGzi3w_3gvQPMzQHxeJlPGIDPYSLpaJCRKoYNLLGbcUdrCUKoSaRyfEzL4ATnteKP2TfyzfoAVh1i5Kpa_VmIijrnduQpaY8f3zG3WoGPNJrVYlAkNW10Af4Sgz53Lwkm1nL1Xp2RSJO1N4pId9Ml-OLibxjnYl8ahmBmrReo3ewBqIGmPn5k_MsnyohwJdt7FnnDgVW2dEYGojLicyUTmbxn8Iv-d5fNMODD99vAKO6VQ',
     validTill: '31-DEC-2028',
-    mandate: 'Supreme Oversight & National Anti-Corruption Enforcement'
+    mandate: 'Supreme statutory oversight, nationwide whistleblower defense, and anti-corruption field taskforce coordination under Bharatiya Nyaya Sanhita (BNS).',
+    isAssigned: true
   },
   {
-    id: 'RW-MH-102',
-    uidNumber: 'RW-MH-102',
-    badgeNumber: 'RW-MH-102',
-    name: 'Sushant Prakash Kagale',
-    dob: '15/05/1988',
-    joinDate: '10-MAR-2022',
-    phoneContact: '+91 99201 33445',
-    email: 'sushant.kagale@raidactionwing.in',
-    designation: 'National Investigation Officer (Maharashtra)',
+    id: 'RAWF/2026/1376',
+    uidNumber: 'RAWF/2026/1376',
+    badgeNumber: 'RAWF/2026/1376',
+    name: 'Andrew Paul',
+    dob: '20/12/1995',
+    joinDate: '11-SEP-2024',
+    phoneContact: '+91 98200 45678',
+    email: 'andrew000us@gmail.com',
+    designation: 'District Special Officer',
     division: 'state',
-    state: 'Maharashtra',
+    state: 'Tamil Nadu',
     status: 'ACTIVE',
-    photoUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBMjYeqo0GQGnnVCALTm2YL_ZT1q7UGxG2MHvI0ielMI02SoUfp7g5QqGw__jl2OI9rA6Sv7mczVS2AZSCpxLLApzP9k-GtQQkvcolLJEFLEn0q_ekfnD6hgQW9uX27XF-4IqmYs9v8KrBoJj0nd7Mgd7W5UZ7LU4SxmYgLGLDoXV0NEAzysp4ytUcxU2NpgRsfAfdOKxindrSxiH2jWNtLsPPEuyWASR5qtfoQHOTyXE9qVDMTYNK9g',
-    validTill: '31-DEC-2026',
-    mandate: 'Special Taskforce & Inter-State Economic Offenses'
-  },
-  {
-    id: 'RW-GJ-104',
-    uidNumber: 'RW-GJ-104',
-    badgeNumber: 'RW-GJ-104',
-    name: 'Vipul Harshad Bhai Dave',
-    dob: '22/09/1982',
-    joinDate: '15-JUL-2022',
-    phoneContact: '+91 98980 12345',
-    email: 'vipul.dave@raidactionwing.in',
-    designation: 'State Director (Gujarat)',
-    division: 'state',
-    state: 'Gujarat',
-    status: 'ACTIVE',
-    photoUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD9LpEKtygMH9hqnG8rn8G5GMkabb623q08xiOT4fExKQpAxmXfMBqx50Q421-RJs_RA4EwXpnpRV1vaqisuY9ShWwE_-dlHHp_l7H0umSi-j2VgHBzJmVoOA8AM1QY53nkZJcjRhWa6zUi3jLx9E8P0TfWFCBiNT_4FHSL3zDAFwlNVyyRoC8-tqz0zakISnTxT5kgus_OER8csHXvPU8wcfGQAr0q3CJFHyqhjWApzxGyKoGWR4AVzg',
-    validTill: '31-DEC-2026',
-    mandate: 'State Vigilance Directorate & Port Operations Audit'
-  },
-  {
-    id: 'RW-MP-105',
-    uidNumber: 'RW-MP-105',
-    badgeNumber: 'RW-MP-105',
-    name: 'Rajesh Shrawan',
-    dob: '10/01/1985',
-    joinDate: '01-NOV-2022',
-    phoneContact: '+91 94250 88776',
-    email: 'rajesh.shrawan@raidactionwing.in',
-    designation: 'State Director (Madhya Pradesh)',
-    division: 'state',
-    state: 'Madhya Pradesh',
-    status: 'ACTIVE',
-    photoUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCzjOJW-0F9kQafL4EqjRAyrLWNV05ZyFI-1wCYRNv9TdnD9-FDOP2WWAjXCkijW26gHb1QNBYfsumpnqHE-Z_PIJjl6A482Zztt2P-Ikxhz3VDSd-hvdGvGBH4yMSpa9Tgze_hoLkmCGJOLdcGpmyxTHe1NkZPopjqRLXPL0dV1a2pl7Z7Ck625nGGdUd4MkhaYG8syU4ZgRlQmgy9bWL1wQ6MhVeIWtYqPxpx4ChjMP1qVWRXnZMwcQ',
-    validTill: '31-DEC-2026',
-    mandate: 'Central India Territorial Vigilance'
-  },
-  {
-    id: 'RW-NAT-W01',
-    uidNumber: 'RW-NAT-W01',
-    badgeNumber: 'RW-NAT-W01',
-    name: 'Phalguni Dutta Halder',
-    dob: '05/03/1990',
-    joinDate: '12-AUG-2023',
-    phoneContact: '+91 98310 55667',
-    email: 'phalguni.halder@raidactionwing.in',
-    designation: 'National Secretary (Women Cell)',
-    division: 'national',
-    state: 'National HQ & Eastern Region',
-    status: 'VERIFIED',
-    photoUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBXFCKE0UX1utOq5DO1VETiwFFYnVuSBEzgwYvyQMsWJwudqom0fj2Hqe7nJMb5IgAf69rwxqcNoZp1AP4JyU1D3DCT42-kalWCBy2XsjlAlP0yDcmnKsxE3xIQ70-bRGNOY_HUXW0kNVO_8LkJysii3DdNQvHuvsjtPFboGrTQ69CMmDUexMKUTIwitMNzdhHpeMz_lA9FCuZBBE-5jm3374Mgi1nD1bSxEwkEKPAMdHfMnlpoOWhCmA',
-    validTill: '31-DEC-2027',
-    mandate: 'POSH Enforcement & Women Rights Directorate'
-  },
-  {
-    id: 'RW-LEG-001',
-    uidNumber: 'RW-LEG-001',
-    badgeNumber: 'RW-LEG-001',
-    name: 'Shekhar Kumar Nigam',
-    dob: '18/11/1975',
-    joinDate: '01-FEB-2021',
-    phoneContact: '+91 98101 22334',
-    email: 'shekhar.nigam@raidactionwing.in',
-    designation: 'Chief Legal Advisor & Advocate',
-    division: 'legal',
-    state: 'Supreme Court & High Courts',
-    status: 'VERIFIED',
-    photoUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBKBCimjG0t1Psi8NaW5y8ZgGe-tVqjZvwsrTMqXJxoHOnsCBW5xp-MEf3kF0BUVI13eU257ZEk5qleDMl-E8-NJyRLA8QXgv87iz2Dmx-cVK15KP9s1NnOfjkkwFhSrq5tOIVOSbqgtI3uGEiXcm-ZVJW3N25MAS-_to6BIFBpa3YVexuhBluhv_4Ws9_slKeyV6QwyacnImqe_0E_7gI8gwvpD-TnyhFzs8d6atjcHjuZucvfY_hl7Q',
-    validTill: '31-DEC-2028',
-    mandate: 'Constitutional Rights, Anticipatory Bail & Writs'
-  },
-  {
-    id: 'RW-NAT-002',
-    uidNumber: 'RW-NAT-002',
-    badgeNumber: 'RW-NAT-002',
-    name: 'Vishal Nain',
-    dob: '08/04/1986',
-    joinDate: '10-MAY-2022',
-    phoneContact: '+91 98112 33445',
-    email: 'vishal.nain@raidactionwing.in',
-    designation: 'National Deputy Director (India)',
-    division: 'national',
-    state: 'National HQ',
-    status: 'ACTIVE',
-    photoUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDGi_EgkVKseLfKV27C6HTcNJHIos7qqFDnbT4fbIYckiKs7pgl9QqMBfBTowT-k04KyQblyZl1sjwPyxJzShvNe522AAL5s7eavqteLF80e8tSGaKMDqj-RRKkeVonrebNxuQXeH-52UjEsTMig7eYQSECi4-3gXwKd87FTziON3_mdC6kLlrxnapbxyZsYZ1S16n8-0JJMPgGJqQyITxFHRjUe0JhVOSybtlqvMOVbT_dYawEhfuWXw',
-    validTill: '31-DEC-2027',
-    mandate: 'Inter-Agency Liaison & Field Intelligence'
-  },
-  {
-    id: 'RW-UP-106',
-    uidNumber: 'RW-UP-106',
-    badgeNumber: 'RW-UP-106',
-    name: 'Subedar Saroj / Ajay Kumar',
-    dob: '12/06/1980',
-    joinDate: '20-JUN-2022',
-    phoneContact: '+91 94150 77889',
-    email: 'subedar.saroj@raidactionwing.in',
-    designation: 'State Incharges (Uttar Pradesh)',
-    division: 'state',
-    state: 'Uttar Pradesh',
-    status: 'ACTIVE',
-    photoUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCmZOpfbug19sIOaInPooKLlPo4DYXaV5nnLv02DzRz_QArFJv5Q-1t2gcJEeD5koEUm6UnK-kn1cyEhQvbNXaLWzSEQyXtP3Jtbb0T8Elu-_riLzGqfiIvwj1uiwzvtfozNAXJizD7PouYEdKymX0-LmpzGs3T-hwi8EXEEwOisQDkfNyhOfVKzlXwRz7iVCIn7eF3eLrqYbVfDzq9ur6fypCfinXowr1DIu_NdhigHdqEVtmhC_h8Vw',
-    validTill: '31-DEC-2026',
-    mandate: 'Northern Regional Operations & Rural Grievance Desk'
+    photoUrl: '',
+    validTill: '11-09-2027',
+    mandate: 'District Vigilance & Field Taskforce Enforcement',
+    isAssigned: true
   }
 ];
+
+// Try reading physical uploaded officers if present
+try {
+  const offFilePath = path.join(process.cwd(), 'public', 'uploads', 'officers.json');
+  if (fs.existsSync(offFilePath)) {
+    const raw = fs.readFileSync(offFilePath, 'utf-8');
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      officersDatabase.splice(0, officersDatabase.length, ...parsed);
+    }
+  }
+} catch {}
 
 const grievancesDatabase: Record<string, GrievanceRecord> = {
   'GRV-2025-IND-881': {
@@ -735,18 +631,21 @@ async function startServer() {
     res.json({ success: true, count: list.length, data: list });
   });
 
+  // API 1D: Public Activities Categories (placed before /api/activities/:id)
+  app.get('/api/activities/categories', (_req, res) => {
+    res.json({ success: true, count: activityCategoriesDatabase.length, data: activityCategoriesDatabase });
+  });
+
   app.get('/api/activities/:id', (req, res) => {
     const { id } = req.params;
+    if (id === 'categories') {
+      return res.json({ success: true, count: activityCategoriesDatabase.length, data: activityCategoriesDatabase });
+    }
     const item = activitiesDatabase.find((a) => a.id === id);
     if (!item) {
       return res.status(404).json({ success: false, message: 'Activity article not found.' });
     }
     res.json({ success: true, data: item });
-  });
-
-  // API 1D: Public Activities Categories
-  app.get('/api/activities/categories', (_req, res) => {
-    res.json({ success: true, count: activityCategoriesDatabase.length, data: activityCategoriesDatabase });
   });
 
   // API 1E: Public Broadcast Video Status & Upload
@@ -936,11 +835,21 @@ async function startServer() {
     }
 
     const cleanCode = code.trim().toUpperCase();
+    const cleanAlnum = cleanCode.replace(/[^A-Z0-9]/g, '');
 
     // Check blacklist first
-    const isBlacklisted = blacklistedDatabase.find(
-      (b) => b.id.toUpperCase() === cleanCode || b.badgeNumber.toUpperCase() === cleanCode
-    );
+    const isBlacklisted = blacklistedDatabase.find((b) => {
+      const bBadge = (b.badgeNumber || b.id || '').toUpperCase();
+      const bAlnum = bBadge.replace(/[^A-Z0-9]/g, '');
+      const bName = (b.name || '').toUpperCase();
+      return (
+        bBadge === cleanCode ||
+        (cleanAlnum && bAlnum && cleanAlnum === bAlnum) ||
+        cleanCode.includes(bBadge) ||
+        bName.includes(cleanCode)
+      );
+    });
+
     if (isBlacklisted) {
       return res.json({
         success: true,
@@ -950,21 +859,26 @@ async function startServer() {
       });
     }
 
-    const officer = officersDatabase.find(
-      (o) =>
-        o.id.toUpperCase() === cleanCode ||
-        o.badgeNumber.toUpperCase() === cleanCode ||
-        cleanCode.includes(o.badgeNumber.toUpperCase()) ||
-        cleanCode.includes(o.id.toUpperCase()) ||
-        o.name.toUpperCase().includes(cleanCode)
-    );
+    const officer = officersDatabase.find((o) => {
+      const oUid = (o.uidNumber || o.badgeNumber || o.id || '').toUpperCase();
+      const oAlnum = oUid.replace(/[^A-Z0-9]/g, '');
+      const oName = (o.name || '').toUpperCase();
+
+      if (oUid === cleanCode) return true;
+      if (cleanAlnum && oAlnum && (cleanAlnum === oAlnum || oAlnum.includes(cleanAlnum) || cleanAlnum.includes(oAlnum))) return true;
+      if (oUid.includes(cleanCode) || cleanCode.includes(oUid)) return true;
+      if (cleanCode.length >= 3 && oName.includes(cleanCode)) return true;
+      return false;
+    });
 
     if (officer) {
+      const displayId = officer.uidNumber || officer.badgeNumber || officer.id;
       return res.json({
         success: true,
         verified: true,
         officer: {
-          id: officer.id,
+          id: displayId,
+          uidNumber: displayId,
           name: officer.name,
           designation: officer.designation,
           division: officer.division,
@@ -974,7 +888,7 @@ async function startServer() {
           mandate: officer.mandate,
           photoUrl: officer.photoUrl
         },
-        message: `VALID OFFICIAL: ${officer.name} is an authorized active officer in RAWF Roster.`
+        message: `VALID OFFICIAL: ${officer.name} (UID: ${displayId}) is an authorized active officer in RAWF Roster.`
       });
     }
 
@@ -1680,7 +1594,8 @@ async function startServer() {
       validTill: validTill || expiryDate || '11-09-2027',
       phoneContact: phoneContact || '',
       email: email || `${String(name).toLowerCase().replace(/[^a-z0-9]/g, '.')}@raidactionwing.in`,
-      mandate: mandate || 'Citizen Vigilance & Constitutional Rights Protection'
+      mandate: mandate || 'Citizen Vigilance & Constitutional Rights Protection',
+      isAssigned: req.body.isAssigned !== undefined ? Boolean(req.body.isAssigned) : true
     };
 
     if (existingIndex !== -1) {
