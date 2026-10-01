@@ -269,6 +269,7 @@ export const MembershipApplySection: React.FC = () => {
                         <option value="District Incharge">3) District Incharge</option>
                         <option value="Investigation Officer">4) Investigation Officer</option>
                         <option value="Information officer">5) Information officer</option>
+                        <option value="District Special Officer">6) District Special Officer</option>
                       </optgroup>
 
                       <optgroup label="✔️ State level">
@@ -283,6 +284,9 @@ export const MembershipApplySection: React.FC = () => {
                         <option value="National Secretary">1) National Secretary</option>
                         <option value="National Investigation Officer">2) National Investigation Officer</option>
                         <option value="National co-ordinator">3) National co-ordinator</option>
+                        <option value="Director General (Crime & Vigilance Cell)">4) Director General (Crime & Vigilance Cell)</option>
+                        <option value="National Deputy Director (India)">5) National Deputy Director (India)</option>
+                        <option value="Chief Legal Advisor & Advocate">6) Chief Legal Advisor & Advocate</option>
                       </optgroup>
                     </select>
                   </div>
