@@ -143,42 +143,49 @@ export const OfficersDirectory: React.FC<OfficersDirectoryProps> = ({ onVerifyOf
     };
   }, []);
 
-  // Single Director General (Crime & Vigilance Cell) Supreme Commander
-  const directorGeneral = useMemo(() => {
+  // Supreme Directorate Command (Founder: Manoj Chauhan)
+  const supremeCommander = useMemo(() => {
     const foundInRoster = officersList.find(
       (o) =>
-        o.designation.toLowerCase().includes('director general') ||
-        (o.uidNumber && o.uidNumber.toUpperCase().includes('DG-CRIME')) ||
-        (o.badgeNumber && o.badgeNumber.toUpperCase().includes('DG-CRIME'))
+        (o.name && o.name.toLowerCase().includes('manoj chauhan')) ||
+        o.designation.toLowerCase().includes('founder') ||
+        (o.uidNumber && (o.uidNumber.toUpperCase().includes('DG-CRIME') || o.uidNumber.toUpperCase().includes('RAW/2023/001'))) ||
+        (o.badgeNumber && (o.badgeNumber.toUpperCase().includes('DG-CRIME') || o.badgeNumber.toUpperCase().includes('RAW/2023/001')))
     );
-    if (foundInRoster) return foundInRoster;
+    if (foundInRoster) {
+      return {
+        ...foundInRoster,
+        designation: foundInRoster.designation || 'Founder'
+      };
+    }
 
     return {
-      id: 'DG-CRIME-001',
-      uidNumber: 'DG-CRIME-001',
-      badgeNumber: 'DG-CRIME-001',
+      id: 'RAW/2023/001',
+      uidNumber: 'RAW/2023/001',
+      badgeNumber: 'RAW/2023/001',
       name: 'Manoj Chauhan',
-      designation: 'Director General (Crime & Vigilance Cell)',
+      designation: 'Founder',
       division: 'national',
       state: 'National HQ - New Delhi',
       status: 'COMMAND',
       photoUrl:
         'https://lh3.googleusercontent.com/aida-public/AB6AXuDUm1YEgLpksGzi3w_3gvQPMzQHxeJlPGIDPYSLpaJCRKoYNLLGbcUdrCUKoSaRyfEzL4ATnteKP2TfyzfoAVh1i5Kpa_VmIijrnduQpaY8f3zG3WoGPNJrVYlAkNW10Af4Sgz53Lwkm1nL1Xp2RSJO1N4pId9Ml-OLibxjnYl8ahmBmrReo3ewBqIGmPn5k_MsnyohwJdt7FnnDgVW2dEYGojLicyUTmbxn8Iv-d5fNMODD99vAKO6VQ',
-      tagText: 'DG RAWF',
+      tagText: 'FOUNDER',
       tagColor: 'amber' as const,
       isAssigned: true
     };
   }, [officersList]);
 
-  // Assigned Subordinate / Field Officers (excluding Director General to avoid duplication)
+  // Assigned Subordinate / Field Officers (excluding Founder to avoid duplication)
   const subordinateOfficers = useMemo(() => {
     return officersList.filter(
       (o) =>
-        !o.designation.toLowerCase().includes('director general') &&
-        o.uidNumber !== directorGeneral.uidNumber &&
-        o.badgeNumber !== directorGeneral.badgeNumber
+        !o.designation.toLowerCase().includes('founder') &&
+        !(o.name && o.name.toLowerCase().includes('manoj chauhan')) &&
+        o.uidNumber !== supremeCommander.uidNumber &&
+        o.badgeNumber !== supremeCommander.badgeNumber
     );
-  }, [officersList, directorGeneral]);
+  }, [officersList, supremeCommander]);
 
   const filteredOfficers = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
@@ -224,7 +231,7 @@ export const OfficersDirectory: React.FC<OfficersDirectoryProps> = ({ onVerifyOf
         </div>
 
         {/* ============================================================== */}
-        {/* APEX COMMAND: DIRECTOR GENERAL (CRIME & VIGILANCE CELL)         */}
+        {/* SUPREME COMMAND: FOUNDER (MANOJ CHAUHAN)                       */}
         {/* Displayed prominently above the search box                     */}
         {/* ============================================================== */}
         <div className="relative overflow-hidden rounded-2xl border-2 border-amber-500/50 bg-gradient-to-br from-slate-950 via-[#071d3a] to-[#0a2540] text-white p-5 sm:p-7 shadow-xl shadow-slate-950/20">
@@ -237,15 +244,15 @@ export const OfficersDirectory: React.FC<OfficersDirectoryProps> = ({ onVerifyOf
             <div className="flex items-center gap-2">
               <span className="material-symbols-outlined text-amber-400 text-lg">military_tech</span>
               <span className="font-mono text-[11px] sm:text-xs font-black tracking-widest text-amber-400 uppercase">
-                Supreme Directorate Command • Apex Oversight
+                Supreme Directorate Command
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 px-2.5 py-0.5 rounded-full font-mono text-[10px] font-bold inline-flex items-center gap-1.5 shadow-2xs">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                ACTIVE IN SERVICE
+              <span className="bg-amber-500/20 border border-amber-400/50 text-amber-300 px-2.5 py-0.5 rounded-full font-mono text-[10px] font-bold inline-flex items-center gap-1.5 shadow-2xs">
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                FOUNDER
               </span>
-              <span className="bg-amber-500/20 border border-amber-400/40 text-amber-300 px-2.5 py-0.5 rounded font-mono text-[10px] font-bold uppercase">
+              <span className="bg-blue-500/20 border border-blue-400/40 text-blue-300 px-2.5 py-0.5 rounded font-mono text-[10px] font-bold uppercase">
                 NATIONAL HQ
               </span>
             </div>
@@ -256,10 +263,10 @@ export const OfficersDirectory: React.FC<OfficersDirectoryProps> = ({ onVerifyOf
             {/* Commander Photo with Executive Gold Frame */}
             <div className="relative shrink-0 group">
               <div className="relative w-32 h-40 sm:w-36 sm:h-44 rounded-xl overflow-hidden border-2 border-amber-400/80 shadow-2xl bg-slate-900 ring-4 ring-amber-400/20">
-                {directorGeneral.photoUrl ? (
+                {supremeCommander.photoUrl ? (
                   <img
-                    src={directorGeneral.photoUrl}
-                    alt={directorGeneral.name}
+                    src={supremeCommander.photoUrl}
+                    alt={supremeCommander.name}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 pointer-events-none select-none"
                     onError={(e) => {
                       const target = e.currentTarget as HTMLImageElement;
@@ -271,16 +278,16 @@ export const OfficersDirectory: React.FC<OfficersDirectoryProps> = ({ onVerifyOf
                 ) : null}
                 <div
                   data-dg-avatar-fallback="true"
-                  style={{ display: directorGeneral.photoUrl ? 'none' : 'flex' }}
+                  style={{ display: supremeCommander.photoUrl ? 'none' : 'flex' }}
                   className="w-full h-full flex flex-col items-center justify-center bg-slate-900 text-amber-300/70 p-2 text-center"
                 >
                   <span className="material-symbols-outlined text-5xl">shield_person</span>
-                  <span className="text-[10px] font-mono font-bold uppercase mt-1">DIRECTOR GENERAL</span>
+                  <span className="text-[10px] font-mono font-bold uppercase mt-1">FOUNDER</span>
                 </div>
 
                 {/* Bottom Gold Ribbon */}
                 <div className="absolute bottom-0 inset-x-0 bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 text-slate-950 font-mono text-[9px] font-black uppercase text-center py-0.5 tracking-wider shadow-md">
-                  DG • SUPREME COMMAND
+                  FOUNDER • SUPREME COMMAND
                 </div>
               </div>
 
@@ -295,42 +302,48 @@ export const OfficersDirectory: React.FC<OfficersDirectoryProps> = ({ onVerifyOf
               <div>
                 <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-1">
                   <span className="font-mono text-xs font-bold text-amber-300 bg-amber-400/10 border border-amber-400/30 px-2 py-0.5 rounded">
-                    UID: {directorGeneral.uidNumber || directorGeneral.badgeNumber}
+                    UID: {supremeCommander.uidNumber || supremeCommander.badgeNumber || 'RAW/2023/001'}
                   </span>
-                  <span className="text-[11px] font-mono text-slate-400">
-                    Tenure: 2021 – 2028 (Statutory Active)
+                  <span className="font-mono text-[11px] font-bold text-amber-300 bg-amber-500/15 border border-amber-400/40 px-2.5 py-0.5 rounded-full inline-flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[13px] text-amber-400">verified</span>
+                    Founder &amp; Life Trustee
                   </span>
                 </div>
                 <h3 className="font-headline font-black text-2xl sm:text-3xl text-white uppercase tracking-tight">
-                  {directorGeneral.name}
+                  {supremeCommander.name}
                 </h3>
                 <p className="text-amber-300 font-bold text-sm sm:text-base mt-0.5 flex items-center justify-center md:justify-start gap-1.5">
                   <span className="material-symbols-outlined text-[18px] text-amber-400">workspace_premium</span>
-                  <span>Director General (Crime &amp; Vigilance Cell)</span>
+                  <span>Founder</span>
                 </p>
                 <span className="text-xs text-slate-300 flex items-center justify-center md:justify-start gap-1.5 mt-1 font-medium">
                   <span className="material-symbols-outlined text-[15px] text-amber-400">assured_workload</span>
-                  <span>National Supreme Command • New Delhi HQ</span>
+                  <span>Supreme Directorate Command • National Headquarters, New Delhi</span>
                 </span>
               </div>
 
               {/* Mandate Description */}
-              <div className="bg-slate-900/60 border-l-3 border-amber-400 rounded-r-lg p-3 text-xs text-slate-200/90 leading-relaxed text-left">
-                <strong className="text-amber-300 block font-mono text-[10px] uppercase mb-0.5">
-                  Official Statutory Mandate:
-                </strong>
-                Overseeing nationwide whistleblower integrity protocols, inter-state vigilance taskforces, public fraud eradication, and statutory escalation to CBI, ED, and statutory vigilance tribunals.
+              <div className="bg-slate-900/60 border-l-3 border-amber-400 rounded-r-lg p-3 text-xs text-slate-200/90 leading-relaxed text-left space-y-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-amber-400 text-sm">stars</span>
+                  <strong className="text-amber-300 font-mono text-[10px] uppercase">
+                    Founder Mandate &amp; Supreme Authority:
+                  </strong>
+                </div>
+                <p className="text-slate-300">
+                  Chief Architect and Founder of Raid Action Wing Foundation under statutory IFA 760 Charter. Directing nationwide whistleblower protection protocols, apex anti-corruption taskforces, public fraud eradication, and statutory coordination with central investigative bodies across India.
+                </p>
               </div>
 
               {/* Action Buttons */}
               <div className="pt-1 flex flex-wrap items-center justify-center md:justify-start gap-2.5">
                 <button
-                  onClick={() => onVerifyOfficer(directorGeneral.uidNumber || directorGeneral.badgeNumber || 'DG-CRIME-001')}
+                  onClick={() => onVerifyOfficer(supremeCommander.uidNumber || supremeCommander.badgeNumber || 'RAW/2023/001')}
                   className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs uppercase rounded transition-all shadow-md inline-flex items-center gap-1.5 cursor-pointer"
-                  aria-label={`Verify credentials for Director General ${directorGeneral.name}`}
+                  aria-label={`Verify credentials for Founder ${supremeCommander.name}`}
                 >
                   <span className="material-symbols-outlined text-[16px]">verified_user</span>
-                  <span>Verify DG Credentials</span>
+                  <span>Verify Founder Credentials</span>
                 </button>
 
                 <a
@@ -338,7 +351,7 @@ export const OfficersDirectory: React.FC<OfficersDirectoryProps> = ({ onVerifyOf
                   className="px-3.5 py-2 bg-white/10 hover:bg-white/20 text-white border border-white/20 rounded font-bold text-xs uppercase transition-colors inline-flex items-center gap-1.5 cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[16px]">campaign</span>
-                  <span>Direct Escalation to DG Desk</span>
+                  <span>Direct Escalation to Founder Desk</span>
                 </a>
               </div>
             </div>

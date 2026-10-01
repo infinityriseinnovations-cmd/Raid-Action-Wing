@@ -914,16 +914,16 @@ if ($route === 'officers/verify' || $route === 'officer/verify') {
         if (!$officer) {
             $defaultOfficers = [
                 [
-                    'id' => 'DG-CRIME-001',
-                    'uidNumber' => 'DG-CRIME-001',
-                    'badgeNumber' => 'DG-CRIME-001',
+                    'id' => 'RAW/2023/001',
+                    'uidNumber' => 'RAW/2023/001',
+                    'badgeNumber' => 'RAW/2023/001',
                     'name' => 'Manoj Chauhan',
-                    'designation' => 'Director General (Crime & Vigilance Cell)',
+                    'designation' => 'Founder',
                     'division' => 'national',
                     'state' => 'National HQ - New Delhi',
                     'status' => 'COMMAND',
-                    'validTill' => '31-DEC-2028',
-                    'mandate' => 'Supreme statutory oversight, nationwide whistleblower defense, and anti-corruption field taskforce coordination under Bharatiya Nyaya Sanhita (BNS).',
+                    'validTill' => 'PERMANENT (Statutory Founder)',
+                    'mandate' => 'Chief Architect and Founder of Raid Action Wing Foundation under statutory IFA 760 Charter. Directing nationwide whistleblower protection protocols, apex anti-corruption taskforces, and statutory coordination.',
                     'photoUrl' => 'https://lh3.googleusercontent.com/aida-public/AB6AXuDUm1YEgLpksGzi3w_3gvQPMzQHxeJlPGIDPYSLpaJCRKoYNLLGbcUdrCUKoSaRyfEzL4ATnteKP2TfyzfoAVh1i5Kpa_VmIijrnduQpaY8f3zG3WoGPNJrVYlAkNW10Af4Sgz53Lwkm1nL1Xp2RSJO1N4pId9Ml-OLibxjnYl8ahmBmrReo3ewBqIGmPn5k_MsnyohwJdt7FnnDgVW2dEYGojLicyUTmbxn8Iv-d5fNMODD99vAKO6VQ'
                 ],
                 [

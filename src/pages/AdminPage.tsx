@@ -2845,8 +2845,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                       <div className="font-headline font-black text-[#0b3b95] uppercase">
                         Manoj Chauhan
                       </div>
-                      <div className="text-[10px] text-slate-500">
-                        Director General (Crime & Vigilance Cell)
+                      <div className="text-[10px] text-slate-500 font-semibold">
+                        Founder • Supreme Directorate Command
                       </div>
                       <div className="text-[10px] text-slate-500 font-mono">
                         Authorised Signatory • Central Command
