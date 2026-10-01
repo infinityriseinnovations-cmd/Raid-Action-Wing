@@ -997,7 +997,7 @@ if ($route === 'officers' && $method === 'GET') {
     exit;
 }
 
-if ($route === 'blacklist' && $method === 'GET') {
+if (($route === 'blacklist' || $route === 'admin/blacklist') && $method === 'GET') {
     $blacklist = [];
     if ($pdo) {
         try {
@@ -1010,6 +1010,69 @@ if ($route === 'blacklist' && $method === 'GET') {
     }
     echo json_encode(['success' => true, 'data' => $blacklist]);
     exit;
+}
+
+if ($routeParts[0] === 'admin' && isset($routeParts[1]) && $routeParts[1] === 'blacklist') {
+    $targetId = $routeParts[2] ?? ($input['id'] ?? null);
+
+    if ($method === 'POST') {
+        $newEntry = [
+            'id' => $input['id'] ?? (string)time(),
+            'name' => $input['name'] ?? '',
+            'badgeNumber' => $input['badgeNumber'] ?? $input['uidNumber'] ?? '',
+            'uidNumber' => $input['uidNumber'] ?? $input['badgeNumber'] ?? '',
+            'jurisdiction' => $input['jurisdiction'] ?? $input['state'] ?? 'National',
+            'revocationDate' => $input['revocationDate'] ?? date('Y-m-d'),
+            'reason' => $input['reason'] ?? 'Revoked under administrative order.',
+            'status' => $input['status'] ?? 'REVOKED & BLACKLISTED'
+        ];
+        if ($pdo) {
+            try {
+                $stmt = $pdo->prepare("INSERT INTO officer_blacklists (id, name, badge_number, jurisdiction, revocation_date, reason, status) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$newEntry['id'], $newEntry['name'], $newEntry['badgeNumber'], $newEntry['jurisdiction'], $newEntry['revocationDate'], $newEntry['reason'], $newEntry['status']]);
+            } catch (Exception $e) {}
+        }
+        $blacklist = getJsonStore('blacklist', []);
+        array_unshift($blacklist, $newEntry);
+        saveJsonStore('blacklist', $blacklist);
+        echo json_encode(['success' => true, 'message' => 'Blacklist record added.', 'data' => $newEntry]);
+        exit;
+    }
+
+    if ($method === 'PUT' && $targetId) {
+        $blacklist = getJsonStore('blacklist', []);
+        foreach ($blacklist as &$b) {
+            if ($b['id'] == $targetId || ($b['badgeNumber'] ?? '') == $targetId || ($b['uidNumber'] ?? '') == $targetId) {
+                $b = array_merge($b, $input);
+                break;
+            }
+        }
+        saveJsonStore('blacklist', $blacklist);
+        if ($pdo) {
+            try {
+                $stmt = $pdo->prepare("UPDATE officer_blacklists SET name = ?, badge_number = ?, jurisdiction = ?, reason = ?, status = ? WHERE id = ?");
+                $stmt->execute([$input['name'] ?? '', $input['badgeNumber'] ?? '', $input['jurisdiction'] ?? '', $input['reason'] ?? '', $input['status'] ?? '', $targetId]);
+            } catch (Exception $e) {}
+        }
+        echo json_encode(['success' => true, 'message' => 'Blacklist record updated.']);
+        exit;
+    }
+
+    if ($method === 'DELETE' && $targetId) {
+        $blacklist = getJsonStore('blacklist', []);
+        $blacklist = array_filter($blacklist, function($b) use ($targetId) {
+            return $b['id'] != $targetId && ($b['badgeNumber'] ?? '') != $targetId && ($b['uidNumber'] ?? '') != $targetId;
+        });
+        saveJsonStore('blacklist', array_values($blacklist));
+        if ($pdo) {
+            try {
+                $stmt = $pdo->prepare("DELETE FROM officer_blacklists WHERE id = ?");
+                $stmt->execute([$targetId]);
+            } catch (Exception $e) {}
+        }
+        echo json_encode(['success' => true, 'message' => 'Blacklist record deleted.']);
+        exit;
+    }
 }
 
 // ==========================================================================
@@ -1166,7 +1229,7 @@ if ($routeParts[0] === 'admin' && isset($routeParts[1]) && $routeParts[1] === 'o
         exit;
     }
 
-    if ($subAction === 'blacklist') {
+    if ($isBlacklist) {
         $reason = $input['reason'] ?? 'Revoked under administrative order.';
         $allOfficers = getJsonStore('officers', []);
         $blacklist = getJsonStore('blacklist', []);
@@ -1228,12 +1291,43 @@ if ($route === 'activities' && $method === 'GET') {
     exit;
 }
 
-if ($route === 'activities/categories' && $method === 'GET') {
-    echo json_encode(['success' => true, 'data' => ['Ground Action', 'Training & Drills', 'Public Awareness', 'Press Release', 'Legal Advocacy', 'Youth Wing']]);
+$categoriesStore = getJsonStore('activity_categories', ['Ground Action', 'Training & Drills', 'Public Awareness', 'Press Release', 'Legal Advocacy', 'Youth Wing']);
+
+if (($route === 'activities/categories' || $route === 'admin/activities/categories') && $method === 'GET') {
+    echo json_encode(['success' => true, 'data' => $categoriesStore]);
     exit;
 }
 
 if ($routeParts[0] === 'admin' && isset($routeParts[1]) && $routeParts[1] === 'activities') {
+    if (isset($routeParts[2]) && $routeParts[2] === 'categories') {
+        $catName = $routeParts[3] ?? ($input['name'] ?? null);
+
+        if ($method === 'GET') {
+            echo json_encode(['success' => true, 'data' => $categoriesStore]);
+            exit;
+        }
+
+        if ($method === 'POST') {
+            $newCat = trim($input['name'] ?? '');
+            if (!empty($newCat) && !in_array($newCat, $categoriesStore)) {
+                $categoriesStore[] = $newCat;
+                saveJsonStore('activity_categories', $categoriesStore);
+            }
+            echo json_encode(['success' => true, 'message' => 'Category added.', 'data' => $categoriesStore]);
+            exit;
+        }
+
+        if ($method === 'DELETE' && $catName) {
+            $catName = urldecode($catName);
+            $categoriesStore = array_values(array_filter($categoriesStore, function($c) use ($catName) {
+                return strcasecmp($c, $catName) !== 0;
+            }));
+            saveJsonStore('activity_categories', $categoriesStore);
+            echo json_encode(['success' => true, 'message' => 'Category deleted.', 'data' => $categoriesStore]);
+            exit;
+        }
+    }
+
     $actId = $routeParts[2] ?? null;
 
     if ($method === 'GET' && !$actId) {
@@ -1370,8 +1464,8 @@ if ($route === 'grievances' && $method === 'POST') {
 }
 
 // Admin Email Testing & Diagnostic Verification
-if ($route === 'admin/test-email' && $method === 'POST') {
-    $target = trim($input['email'] ?? 'andrew000us@gmail.com');
+if (($route === 'admin/test-email' || $route === 'admin/test-smtp') && $method === 'POST') {
+    $target = trim($input['email'] ?? $input['targetEmail'] ?? 'andrew000us@gmail.com');
     $testSubject = "[RAWF Test] cPanel Mail Delivery Verification at " . date('Y-m-d H:i:s');
     $testHtml = "<h2>RAWF Mail Dispatch Diagnostic</h2><p>This is a live test email confirming that Raid Action Wing Foundation (RAWF) cPanel mail delivery is operational.</p><p><strong>Server Time:</strong> " . date('r') . "<br><strong>Target:</strong> " . htmlspecialchars($target) . "<br><strong>PHP Version:</strong> " . phpversion() . "</p>";
     $dispatched = sendOfficialEmail($target, $testSubject, $testHtml, "RAWF email test");
@@ -1381,6 +1475,26 @@ if ($route === 'admin/test-email' && $method === 'POST') {
         'recipient' => $target,
         'message' => $dispatched ? "Test email successfully sent to {$target}." : "Failed to deliver test email. Check server Exim/SMTP settings.",
         'recentLogs' => array_slice(getJsonStore('email_logs', []), 0, 5)
+    ]);
+    exit;
+}
+
+if ($route === 'admin/test-db' || $route === 'test-db') {
+    $dbStatus = false;
+    $dbMsg = 'Running on JSON Flat-file storage.';
+    if ($pdo) {
+        try {
+            $stmt = $pdo->query("SELECT 1");
+            $dbStatus = true;
+            $dbMsg = 'MySQL Database connection active & verified.';
+        } catch (Exception $e) {
+            $dbMsg = 'Database error: ' . $e->getMessage();
+        }
+    }
+    echo json_encode([
+        'success' => $dbStatus,
+        'connected' => $dbStatus,
+        'message' => $dbMsg
     ]);
     exit;
 }
@@ -1422,19 +1536,66 @@ if ($routeParts[0] === 'grievances' && isset($routeParts[1])) {
     exit;
 }
 
-if ($route === 'admin/grievances' && $method === 'GET') {
-    $grievances = [];
-    if ($pdo) {
-        try {
-            $stmt = $pdo->query("SELECT * FROM grievance_reports ORDER BY created_at DESC");
-            $grievances = $stmt->fetchAll();
-        } catch (Exception $e) {}
+if ($routeParts[0] === 'admin' && isset($routeParts[1]) && $routeParts[1] === 'grievances') {
+    $gId = $routeParts[2] ?? ($input['trackingId'] ?? $input['trackingCode'] ?? null);
+
+    if ($method === 'GET' && !$gId) {
+        $grievances = [];
+        if ($pdo) {
+            try {
+                $stmt = $pdo->query("SELECT * FROM grievance_reports ORDER BY created_at DESC");
+                $grievances = $stmt->fetchAll();
+            } catch (Exception $e) {}
+        }
+        if (empty($grievances)) {
+            $grievances = getJsonStore('grievances', []);
+        }
+        echo json_encode(['success' => true, 'data' => $grievances]);
+        exit;
     }
-    if (empty($grievances)) {
+
+    if ($method === 'PUT' && $gId) {
         $grievances = getJsonStore('grievances', []);
+        $updated = false;
+        foreach ($grievances as &$g) {
+            if (($g['trackingCode'] ?? '') === $gId || ($g['trackingId'] ?? '') === $gId || ($g['id'] ?? '') === $gId) {
+                if (isset($input['status'])) $g['status'] = $input['status'];
+                if (isset($input['statusDetails'])) $g['statusDetails'] = $input['statusDetails'];
+                $g = array_merge($g, $input);
+                $updated = true;
+                break;
+            }
+        }
+        saveJsonStore('grievances', $grievances);
+
+        if ($pdo) {
+            try {
+                $stmt = $pdo->prepare("UPDATE grievance_reports SET status = ?, status_details = ? WHERE tracking_id = ?");
+                $stmt->execute([$input['status'] ?? '', $input['statusDetails'] ?? '', $gId]);
+            } catch (Exception $e) {}
+        }
+
+        echo json_encode(['success' => true, 'message' => 'Grievance dossier updated successfully.']);
+        exit;
     }
-    echo json_encode(['success' => true, 'data' => $grievances]);
-    exit;
+
+    if ($method === 'DELETE' && $gId) {
+        $grievances = getJsonStore('grievances', []);
+        $grievances = array_filter($grievances, function($g) use ($gId) {
+            return ($g['trackingCode'] ?? '') !== $gId && ($g['trackingId'] ?? '') !== $gId && ($g['id'] ?? '') !== $gId;
+        });
+        saveJsonStore('grievances', array_values($grievances));
+
+        if ($pdo) {
+            try {
+                $stmt = $pdo->prepare("DELETE FROM grievance_reports WHERE tracking_id = ?");
+                $stmt->execute([$gId]);
+            } catch (Exception $e) {}
+        }
+
+        echo json_encode(['success' => true, 'message' => 'Grievance dossier deleted.']);
+        exit;
+    }
 }
 
 // ==========================================================================
