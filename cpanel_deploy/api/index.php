@@ -30,9 +30,11 @@ $activitiesDir = $uploadsDir . '/activities';
 $lawsDir = $uploadsDir . '/indian-laws';
 $evidenceDir = $uploadsDir . '/evidence';
 $qrDir = $uploadsDir . '/qr';
+$certificatesDir = $uploadsDir . '/certificates';
+$videosDir = $uploadsDir . '/videos';
 
 // Ensure upload directories exist on server with writable permissions
-foreach ([$uploadsDir, $officersDir, $activitiesDir, $lawsDir, $evidenceDir, $qrDir] as $dir) {
+foreach ([$uploadsDir, $officersDir, $activitiesDir, $lawsDir, $evidenceDir, $qrDir, $certificatesDir, $videosDir] as $dir) {
     if (!file_exists($dir)) {
         @mkdir($dir, 0755, true);
     }
@@ -363,6 +365,79 @@ if (($route === 'upload-logo' || $route === 'admin/logo') && $method === 'POST')
 }
 
 // ==========================================================================
+// 1S. AUTHORIZED SIGNATURE UPLOAD & MANAGEMENT (GET /api/signature & POST /api/upload-signature)
+// ==========================================================================
+if ($route === 'signature' || $route === 'signature-info' || $route === 'admin/signature-info') {
+    $sigFile = $webRoot . '/rawf-signature.png';
+    $backupSig = $uploadsDir . '/rawf-signature.png';
+    $exists = file_exists($sigFile) || file_exists($backupSig);
+    $mtime = file_exists($sigFile) ? filemtime($sigFile) : (file_exists($backupSig) ? filemtime($backupSig) : time());
+
+    $info = getJsonStore('signature-info', null);
+    $version = ($info && !empty($info['version'])) ? (string)$info['version'] : (string)$mtime;
+
+    header('Cache-Control: no-cache, no-store, must-revalidate');
+    echo json_encode([
+        'success' => true,
+        'exists' => $exists,
+        'url' => $exists ? ('/rawf-signature.png?v=' . $version) : null,
+        'version' => $version,
+        'lastModified' => $mtime
+    ]);
+    exit;
+}
+
+if (($route === 'upload-signature' || $route === 'admin/signature') && $method === 'POST') {
+    $imageBase64 = $input['imageBase64'] ?? $input['image'] ?? '';
+    if (empty($imageBase64)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'No signature image data received.']);
+        exit;
+    }
+
+    $savedPrimary = saveBase64File($imageBase64, $webRoot . '/rawf-signature.png');
+    $savedBackup = saveBase64File($imageBase64, $uploadsDir . '/rawf-signature.png');
+
+    if ($savedPrimary || $savedBackup) {
+        $timestamp = time();
+        saveJsonStore('signature-info', [
+            'version' => (string)$timestamp,
+            'url' => '/rawf-signature.png?v=' . $timestamp,
+            'updatedAt' => date('c')
+        ]);
+
+        if ($pdo) {
+            try {
+                $stmt = $pdo->prepare("INSERT INTO system_settings (setting_key, setting_value) VALUES ('signature_version', ?) ON DUPLICATE KEY UPDATE setting_value = ?");
+                $stmt->execute([(string)$timestamp, (string)$timestamp]);
+            } catch (Exception $e) {}
+        }
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Authorized signature image saved permanently and applied across all documents.',
+            'url' => '/rawf-signature.png?v=' . $timestamp,
+            'version' => (string)$timestamp
+        ]);
+        exit;
+    }
+
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => 'Failed to write signature image to server storage.']);
+    exit;
+}
+
+if (($route === 'reset-signature' || $route === 'admin/reset-signature') && $method === 'POST') {
+    $sigFile = $webRoot . '/rawf-signature.png';
+    $backupSig = $uploadsDir . '/rawf-signature.png';
+    if (file_exists($sigFile)) @unlink($sigFile);
+    if (file_exists($backupSig)) @unlink($backupSig);
+    saveJsonStore('signature-info', ['version' => '0', 'url' => null, 'updatedAt' => date('c')]);
+    echo json_encode(['success' => true, 'message' => 'Authorized signature reset to default.']);
+    exit;
+}
+
+// ==========================================================================
 // 2. HOMEPAGE BROADCAST VIDEO: GET & POST /api/broadcast-video
 // ==========================================================================
 if ($route === 'broadcast-video') {
@@ -621,10 +696,24 @@ if (($route === 'memberships' || $route === 'membership/apply') && $method === '
     $fullName = trim($input['fullName'] ?? '');
     $mobile = trim($input['mobile'] ?? '');
     $email = trim($input['email'] ?? '');
-    $wing = trim($input['wing'] ?? 'Civil Vigilance');
+    $wing = trim($input['wing'] ?? 'Only Member');
     $state = trim($input['state'] ?? 'National');
     $aadhaar = trim($input['aadhaarNumber'] ?? '');
     $background = trim($input['background'] ?? '');
+    $txn = trim($input['transactionId'] ?? $input['utrNumber'] ?? '');
+    $fee = intval($input['feeAmount'] ?? 0);
+
+    if ($fee <= 0) {
+        if ($wing === 'Only Member') {
+            $fee = 3500;
+        } elseif (strpos($wing, 'District') === 0) {
+            $fee = 5100;
+        } elseif (strpos($wing, 'State') === 0) {
+            $fee = 7100;
+        } else {
+            $fee = 11100;
+        }
+    }
 
     if (empty($fullName) || empty($mobile) || empty($email)) {
         http_response_code(400);
@@ -654,6 +743,10 @@ if (($route === 'memberships' || $route === 'membership/apply') && $method === '
         'state' => $state,
         'aadhaarLast4' => $last4,
         'background' => $background,
+        'transactionId' => $txn,
+        'utrNumber' => $txn,
+        'feeAmount' => $fee,
+        'paymentStatus' => !empty($txn) ? 'Paid / Under Verification' : 'Pending',
         'status' => 'Pending Verification',
         'submittedAt' => date('Y-m-d H:i:s')
     ];
@@ -661,13 +754,22 @@ if (($route === 'memberships' || $route === 'membership/apply') && $method === '
     saveJsonStore('memberships', $applications);
 
     // Send Admin & Applicant Notification Emails
-    $adminSubject = "[RAWF Intake] New Member Application: {$appId} - {$fullName}";
-    $adminHtml = "<h2>New Member Application Received</h2><p><strong>Application ID:</strong> {$appId}</p><p><strong>Applicant Name:</strong> {$fullName}</p><p><strong>Mobile:</strong> {$mobile}</p><p><strong>Email:</strong> {$email}</p><p><strong>Wing:</strong> {$wing}</p><p><strong>State:</strong> {$state}</p><p><strong>Background / Motivation:</strong></p><blockquote>" . htmlspecialchars($background) . "</blockquote>";
+    $adminSubject = "[RAWF Intake] New Member Application: {$appId} - {$fullName} (₹" . number_format($fee) . ")";
+    $adminHtml = "<h2>New Member Application Received</h2>"
+        . "<p><strong>Application ID:</strong> {$appId}</p>"
+        . "<p><strong>Applicant Name:</strong> {$fullName}</p>"
+        . "<p><strong>Mobile:</strong> {$mobile}</p>"
+        . "<p><strong>Email:</strong> {$email}</p>"
+        . "<p><strong>Role / Wing:</strong> {$wing}</p>"
+        . "<p><strong>Prescribed Fee Paid:</strong> ₹" . number_format($fee) . "</p>"
+        . "<p><strong>UPI Transaction ID / UTR:</strong> " . htmlspecialchars($txn ?: 'N/A') . "</p>"
+        . "<p><strong>State:</strong> {$state}</p>"
+        . "<p><strong>Background / Motivation:</strong></p><blockquote>" . htmlspecialchars($background) . "</blockquote>";
     sendOfficialEmail('info@raidactionwing.in', $adminSubject, $adminHtml);
     sendOfficialEmail('andrew000us@gmail.com', $adminSubject, $adminHtml);
     
     $appSubject = "[RAWF] Membership Application Received: {$appId}";
-    $appHtml = "<h2>RAID ACTION WING FOUNDATION</h2><p>Dear {$fullName},</p><p>Thank you for submitting your membership application (Tracking ID: <strong>{$appId}</strong>) under the IFA 760 Charter. Your application is under review by the State Directorate Command.</p><p>Official Toll-Free: 1800-RAW-CELL | www.raidactionwing.in</p>";
+    $appHtml = "<h2>RAID ACTION WING FOUNDATION</h2><p>Dear {$fullName},</p><p>Thank you for submitting your membership application (Tracking ID: <strong>{$appId}</strong>) under the IFA 760 Charter for <strong>{$wing}</strong> with payment confirmation (UTR: " . htmlspecialchars($txn) . "). Your application is under review by the State Directorate Command.</p><p>Official Toll-Free: 1800-RAW-CELL | www.raidactionwing.in</p>";
     sendOfficialEmail($email, $appSubject, $appHtml);
 
     echo json_encode([
@@ -1328,6 +1430,27 @@ if ($routeParts[0] === 'admin' && isset($routeParts[1]) && $routeParts[1] === 'a
         }
     }
 
+    if (isset($routeParts[2]) && $routeParts[2] === 'upload-video' && $method === 'POST') {
+        $videoBase64 = $input['videoBase64'] ?? '';
+        $fileName = $input['fileName'] ?? ('activity-video-' . time() . '.mp4');
+        if (empty($videoBase64)) {
+            echo json_encode(['success' => false, 'message' => 'No video data received.']);
+            exit;
+        }
+        $safeName = preg_replace('/[^a-zA-Z0-9._-]/', '_', $fileName);
+        $videosDir = $uploadsDir . '/videos';
+        if (!is_dir($videosDir)) {
+            @mkdir($videosDir, 0755, true);
+        }
+        $targetPath = $videosDir . '/' . $safeName;
+        if (saveBase64File($videoBase64, $targetPath)) {
+            echo json_encode(['success' => true, 'message' => 'Video file uploaded successfully.', 'url' => '/uploads/videos/' . $safeName]);
+            exit;
+        }
+        echo json_encode(['success' => false, 'message' => 'Failed to save video on server.']);
+        exit;
+    }
+
     $actId = $routeParts[2] ?? null;
 
     if ($method === 'GET' && !$actId) {
@@ -1372,6 +1495,148 @@ if ($routeParts[0] === 'admin' && isset($routeParts[1]) && $routeParts[1] === 'a
         $acts = array_filter($acts, function($a) use ($actId) { return $a['id'] != $actId; });
         saveJsonStore('activities', array_values($acts));
         echo json_encode(['success' => true, 'message' => 'Activity deleted.']);
+        exit;
+    }
+}
+
+// ==========================================================================
+// CERTIFICATES & STATUTORY ACCREDITATIONS API
+// ==========================================================================
+if ($route === 'certificates' && $method === 'GET') {
+    $certs = getJsonStore('certificates', [
+        [
+            'id' => 'cert-msme-udyam',
+            'title' => 'MSME UDYAM Registration Certificate',
+            'description' => 'Statutory MSME Enterprise accreditation validating Raid Action Wing Foundation under enterprise registration framework by Ministry of Micro, Small and Medium Enterprises, Government of India.',
+            'fileUrl' => '/uploads/certificates/rawf-msme-udyam-certificate.pdf',
+            'fileType' => 'pdf',
+            'fileName' => 'rawf-msme-udyam-certificate.pdf',
+            'fileSize' => '8.6 KB',
+            'registrationNumber' => 'UP-50-0196301',
+            'issuingAuthority' => 'Ministry of MSME, Govt. of India',
+            'issueDate' => '20/03/2023',
+            'category' => 'Government Accreditation',
+            'status' => 'Published',
+            'createdAt' => '2023-03-20T10:00:00.000Z'
+        ],
+        [
+            'id' => 'cert-niti-aayog-darpan',
+            'title' => 'NITI Aayog NGO Darpan Registration',
+            'description' => 'Official NGO Darpan unique identification granting recognition for voluntary vigilance oversight, institutional audits, and civic human rights initiatives across India.',
+            'fileUrl' => '/uploads/certificates/rawf-niti-aayog-darpan.pdf',
+            'fileType' => 'pdf',
+            'fileName' => 'rawf-niti-aayog-darpan.pdf',
+            'fileSize' => '8.5 KB',
+            'registrationNumber' => 'DL/2021/RAWF',
+            'issuingAuthority' => 'NITI Aayog, Government of India',
+            'issueDate' => '11/08/2021',
+            'category' => 'Government Accreditation',
+            'status' => 'Published',
+            'createdAt' => '2021-08-11T11:30:00.000Z'
+        ],
+        [
+            'id' => 'cert-ifa-760-charter',
+            'title' => 'Indian Trusts Act 1882 Statutory Charter (IFA 760)',
+            'description' => 'Fundamental founding trust deed and national vigilance charter empowering RAWF investigative oversight, citizen whistleblower intake, and pro bono legal advocacy nationwide.',
+            'fileUrl' => '/uploads/certificates/rawf-ifa-760-trust-charter.pdf',
+            'fileType' => 'pdf',
+            'fileName' => 'rawf-ifa-760-trust-charter.pdf',
+            'fileSize' => '8.6 KB',
+            'registrationNumber' => 'IFA No. 760 / Reg. No. 448/2023',
+            'issuingAuthority' => 'Sub-Registrar Statutory Registry, Govt. of NCT of Delhi',
+            'issueDate' => '12/01/2023',
+            'category' => 'Trust Charter',
+            'status' => 'Published',
+            'createdAt' => '2023-01-12T09:00:00.000Z'
+        ],
+        [
+            'id' => 'cert-12a-80g-tax-exemption',
+            'title' => 'Income Tax Exemption Order (Section 12A & 80G)',
+            'description' => 'Recognized non-profit taxation exemption enabling 50% tax deduction for philanthropic citizen contributions under Section 80G of the Income Tax Act, 1961.',
+            'fileUrl' => '/uploads/certificates/rawf-12a-80g-tax-exemption.pdf',
+            'fileType' => 'pdf',
+            'fileName' => 'rawf-12a-80g-tax-exemption.pdf',
+            'fileSize' => '8.1 KB',
+            'registrationNumber' => 'AAATR8892EF20231',
+            'issuingAuthority' => 'Income Tax Department, Ministry of Finance, Govt. of India',
+            'issueDate' => '18/04/2023',
+            'category' => 'Tax Exemption',
+            'status' => 'Published',
+            'createdAt' => '2023-04-18T14:00:00.000Z'
+        ]
+    ]);
+    $published = array_values(array_filter($certs, function($c) { return ($c['status'] ?? 'Published') === 'Published'; }));
+    echo json_encode(['success' => true, 'count' => count($published), 'data' => $published]);
+    exit;
+}
+
+if ($routeParts[0] === 'admin' && isset($routeParts[1]) && $routeParts[1] === 'certificates') {
+    if (isset($routeParts[2]) && $routeParts[2] === 'upload' && $method === 'POST') {
+        $fileBase64 = $input['fileBase64'] ?? '';
+        $fileName = $input['fileName'] ?? ('certificate_' . time() . '.pdf');
+        $fileType = $input['fileType'] ?? (strpos($fileBase64, 'application/pdf') !== false ? 'pdf' : 'image');
+
+        if (empty($fileBase64)) {
+            echo json_encode(['success' => false, 'message' => 'No file data received.']);
+            exit;
+        }
+
+        $safeName = 'cert_' . time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $fileName);
+        $targetPath = $certificatesDir . '/' . $safeName;
+        if (saveBase64File($fileBase64, $targetPath)) {
+            $fileUrl = '/uploads/certificates/' . $safeName;
+            $fileSize = file_exists($targetPath) ? round(filesize($targetPath) / 1024, 1) . ' KB' : 'Document';
+            echo json_encode([
+                'success' => true,
+                'message' => 'Certificate uploaded.',
+                'url' => $fileUrl,
+                'fileName' => $safeName,
+                'fileType' => $fileType,
+                'fileSize' => $fileSize
+            ]);
+            exit;
+        }
+        echo json_encode(['success' => false, 'message' => 'Failed to save certificate file.']);
+        exit;
+    }
+
+    $certId = $routeParts[2] ?? null;
+
+    if ($method === 'GET' && !$certId) {
+        $certs = getJsonStore('certificates', []);
+        echo json_encode(['success' => true, 'count' => count($certs), 'data' => $certs]);
+        exit;
+    }
+
+    if ($method === 'POST' && !$certId) {
+        $newCert = $input;
+        $newCert['id'] = $newCert['id'] ?? ('cert-' . time());
+        $newCert['createdAt'] = date('c');
+        $certs = getJsonStore('certificates', []);
+        array_unshift($certs, $newCert);
+        saveJsonStore('certificates', $certs);
+        echo json_encode(['success' => true, 'message' => 'Certificate published.', 'data' => $newCert]);
+        exit;
+    }
+
+    if ($method === 'PUT' && $certId) {
+        $certs = getJsonStore('certificates', []);
+        foreach ($certs as &$c) {
+            if ($c['id'] == $certId) {
+                $c = array_merge($c, $input);
+                break;
+            }
+        }
+        saveJsonStore('certificates', $certs);
+        echo json_encode(['success' => true, 'message' => 'Certificate updated.']);
+        exit;
+    }
+
+    if ($method === 'DELETE' && $certId) {
+        $certs = getJsonStore('certificates', []);
+        $certs = array_filter($certs, function($c) use ($certId) { return $c['id'] != $certId; });
+        saveJsonStore('certificates', array_values($certs));
+        echo json_encode(['success' => true, 'message' => 'Certificate deleted.']);
         exit;
     }
 }

@@ -113,6 +113,28 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Static Right Action Bar: Admin, Apply Online, RTI Cell & Language Toggle */}
           <div className="flex items-center gap-2 sm:gap-3 text-blue-100 text-xs shrink-0 z-10 bg-[#0d47a1] pl-2 sm:pl-3 shadow-[-8px_0_12px_#0d47a1]">
+            {/* Highlighted Certificates Button */}
+            <button
+              onClick={() => handleNavClick('certificates')}
+              className="inline-flex items-center gap-1 bg-amber-400 hover:bg-amber-300 text-slate-950 px-2 py-0.5 rounded font-black transition-colors cursor-pointer text-[11px] shadow-xs"
+              title="Official MSME, NITI Aayog Darpan & IFA 760 Trust Charter Certificates"
+              aria-label="Official Certificates"
+            >
+              <span className="material-symbols-outlined text-[13px] text-slate-950 font-bold">workspace_premium</span>
+              <span>Certificates</span>
+            </button>
+            <span className="text-blue-300/40">|</span>
+            {/* Highlighted Activities & Blog Button */}
+            <button
+              onClick={() => handleNavClick('activities')}
+              className="hidden sm:inline-flex items-center gap-1 bg-red-600 hover:bg-red-500 text-white px-2 py-0.5 rounded font-black transition-colors cursor-pointer text-[11px] shadow-xs"
+              title="Field Activities, Raids & Video Dispatches"
+              aria-label="Field Activities & Blog"
+            >
+              <span className="material-symbols-outlined text-[13px]">campaign</span>
+              <span>Activities/Blog</span>
+            </button>
+            <span className="hidden sm:inline text-blue-300/40">|</span>
             <button
               onClick={() => handleNavClick('admin')}
               className="hidden lg:inline-flex items-center gap-1 bg-amber-600/90 hover:bg-amber-600 text-white px-2 py-0.5 rounded font-bold transition-colors cursor-pointer text-[11px]"
@@ -125,7 +147,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span className="hidden lg:inline text-blue-300/40">|</span>
             <button
               onClick={() => handleNavClick('apply-online')}
-              className="hidden sm:inline-flex items-center gap-1 bg-red-600 hover:bg-red-700 text-white px-2.5 py-0.5 rounded font-bold transition-colors cursor-pointer"
+              className="hidden md:inline-flex items-center gap-1 bg-blue-700 hover:bg-blue-600 text-white px-2 py-0.5 rounded font-bold transition-colors cursor-pointer"
               aria-label="Apply online for RAWF membership"
             >
               Apply Online
@@ -184,8 +206,22 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </button>
 
-          {/* Right Action Bar: [Verify] [ID Card] [DONATE] [Hamburger Menu] */}
-          <div className="flex items-center gap-1.5 sm:gap-2.5 md:gap-3 shrink-0">
+          {/* Right Action Bar: [Certificates] [Verify] [ID Card] [DONATE] [Hamburger Menu] */}
+          <div className="flex items-center gap-1.5 sm:gap-2 md:gap-2.5 shrink-0">
+            {/* Highlighted Certificates Action */}
+            <button
+              onClick={() => handleNavClick('certificates')}
+              className={`hidden md:inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 md:px-3.5 py-1.5 sm:py-2 md:py-2.5 rounded-lg border font-bold text-xs sm:text-sm transition-all shadow-xs cursor-pointer whitespace-nowrap ${
+                currentPage === 'certificates'
+                  ? 'bg-amber-400 text-slate-950 border-amber-500 shadow-xs'
+                  : 'bg-amber-50/90 hover:bg-amber-100 text-amber-900 border-amber-300'
+              }`}
+              title="Official MSME, NITI Aayog Darpan & IFA 760 Certificates"
+            >
+              <span className="material-symbols-outlined text-[16px] sm:text-[18px] text-amber-600">workspace_premium</span>
+              <span>Certificates</span>
+            </button>
+
             {/* 1. Verify Officer Button */}
             <button
               onClick={() => onOpenVerifyModal()}
@@ -349,6 +385,22 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <span>Home</span>
                   </span>
                   <span className="material-symbols-outlined text-[16px] text-slate-300">chevron_right</span>
+                </button>
+
+                {/* Official Certificates & Accreditations */}
+                <button
+                  onClick={() => handleNavClick('certificates')}
+                  className={`w-full py-2.5 px-2 rounded-md flex items-center justify-between text-left cursor-pointer transition-colors ${
+                    currentPage === 'certificates' ? 'text-[#0d47a1] bg-blue-50 font-bold' : 'hover:bg-slate-50'
+                  }`}
+                >
+                  <span className="flex items-center gap-2.5">
+                    <span className="material-symbols-outlined text-[18px] text-amber-600">workspace_premium</span>
+                    <span className="font-bold text-slate-900">Official Certificates &amp; Accreditations</span>
+                  </span>
+                  <span className="text-[10px] font-mono font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">
+                    MSME · IFA 760
+                  </span>
                 </button>
 
                 <button

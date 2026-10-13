@@ -1,7 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { RawfLogo } from '../components/RawfLogo';
 import { OfficialIdCard } from '../components/OfficialIdCard';
+import { AuthorizedSignature, getAuthorizedSignatureUrl } from '../components/AuthorizedSignature';
+import { QuotationModal } from '../components/QuotationModal';
+import { getRoleFee } from '../components/MembershipApplySection';
 import { toInputDate, toStandardDisplayDate, computeTenureExpiry } from '../utils/dateUtils';
+import {
+  getYouTubeVideoId,
+  getYouTubeEmbedUrl,
+  getYouTubeThumbnailUrl,
+  isYouTubeUrl,
+  isUploadedVideoUrl
+} from '../utils/videoUtils';
 import {
   INITIAL_OFFICERS,
   INITIAL_APPLICATIONS,
@@ -9,9 +19,11 @@ import {
   INITIAL_DONATIONS,
   INITIAL_BLACKLIST,
   INITIAL_ACTIVITIES,
+  INITIAL_CERTIFICATES,
   INITIAL_STATS,
   INITIAL_SETTINGS
 } from '../data/defaultAdminData';
+import { certificatesApi, CertificateRecord } from '../services/apiService';
 
 interface AdminPageProps {
   onNavigate: (page: string) => void;
@@ -27,7 +39,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
   const [loginLoading, setLoginLoading] = useState(false);
 
   // Active Tab
-  const [activeTab, setActiveTab] = useState<'overview' | 'officers' | 'applications' | 'grievances' | 'donations' | 'blacklist' | 'activities' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'officers' | 'applications' | 'grievances' | 'donations' | 'blacklist' | 'activities' | 'certificates' | 'settings'>('overview');
+  const [showQuotationModal, setShowQuotationModal] = useState(false);
 
   // Data States with robust local storage persistence & initial fallback
   const [officers, setOfficers] = useState<any[]>(() => {
@@ -90,10 +103,29 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
       const saved = localStorage.getItem('rawf_data_activities');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const hasVideoAct = parsed.some((a: any) => a.id === 'act-field-taskforce-briefing-2026');
+          if (!hasVideoAct && INITIAL_ACTIVITIES[0]) {
+            const merged = [INITIAL_ACTIVITIES[0], ...parsed];
+            localStorage.setItem('rawf_data_activities', JSON.stringify(merged));
+            return merged;
+          }
+          return parsed;
+        }
       }
     } catch {}
     return INITIAL_ACTIVITIES;
+  });
+
+  const [certificates, setCertificates] = useState<CertificateRecord[]>(() => {
+    try {
+      const saved = localStorage.getItem('rawf_data_certificates');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return INITIAL_CERTIFICATES;
   });
 
   const [settings, setSettings] = useState<any>(() => {
@@ -120,6 +152,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
     totalDonationsAmount: donations.reduce((sum, d) => sum + (Number(d.amount) || 0), 0),
     donationsCount: donations.length,
     blacklistedCount: blacklist.length,
+    certificatesCount: certificates.length,
     ...(serverStats || {})
   };
 
@@ -194,6 +227,12 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
 
   useEffect(() => {
     try {
+      localStorage.setItem('rawf_data_certificates', JSON.stringify(certificates));
+    } catch {}
+  }, [certificates]);
+
+  useEffect(() => {
+    try {
       localStorage.setItem('rawf_data_settings', JSON.stringify(settings));
     } catch {}
   }, [settings]);
@@ -204,6 +243,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
   const [appFilterStatus, setAppFilterStatus] = useState('all');
   const [activitySearch, setActivitySearch] = useState('');
   const [activityFilterCategory, setActivityFilterCategory] = useState('All');
+  const [certificateSearch, setCertificateSearch] = useState('');
+  const [certificateFilterCategory, setCertificateFilterCategory] = useState('All');
 
   // Modals & Form States for Officers
   const [showAddOfficerModal, setShowAddOfficerModal] = useState(false);
@@ -217,6 +258,15 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
   const [stagedLogoData, setStagedLogoData] = useState<string | null>(null);
   const [stagedLogoFileName, setStagedLogoFileName] = useState<string | null>(null);
   const logoInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Authorized Signature States
+  const [signatureUploadMsg, setSignatureUploadMsg] = useState<string | null>(null);
+  const [signatureUploadLoading, setSignatureUploadLoading] = useState(false);
+  const [signatureTimestamp, setSignatureTimestamp] = useState<number>(Date.now());
+  const [stagedSignatureData, setStagedSignatureData] = useState<string | null>(null);
+  const [stagedSignatureFileName, setStagedSignatureFileName] = useState<string | null>(null);
+  const [currentSignatureUrl, setCurrentSignatureUrl] = useState<string | null>(() => getAuthorizedSignatureUrl());
+  const signatureInputRef = useRef<HTMLInputElement | null>(null);
 
   // Helper to generate a default UID
   const generateRandomUid = () => `RAWF/2026/${Math.floor(1000 + Math.random() * 9000)}`;
@@ -277,6 +327,9 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
   const [isAddingCategoryInlineEdit, setIsAddingCategoryInlineEdit] = useState(false);
   const [inlineCategoryInputEdit, setInlineCategoryInputEdit] = useState('');
 
+  const [videoUploadingAdd, setVideoUploadingAdd] = useState(false);
+  const [videoUploadingEdit, setVideoUploadingEdit] = useState(false);
+
   const [newActivity, setNewActivity] = useState({
     title: '',
     category: 'Youth Wing',
@@ -285,7 +338,29 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
     description: '',
     content: '',
     image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuA7D1Cv8Zz5hHkHWRsC2dBpAnYUkZ0ZCtxYoBPJYBBLwhi71gukNqmUaq1S7ds7-rpnQy9dgKR1hFGJCvg6fdzR0QNDcs1uncde15aH1Cj_ovJ49wdbEnyi3HcgYt1DebTQ0dmp7nUxPXX0IuIC0B3gzWoAkWgk8l0YIc9eLsbfB7lOIuzdvNL7lz5_EFlnw_PjTKNYWFcNsU5OnVumga3256O6DHiOZwcVeUFcPhTvMLAcYBENLi3UaA',
+    mediaType: 'image' as 'image' | 'video',
+    videoType: 'youtube' as 'upload' | 'youtube',
+    videoUrl: '',
     author: 'RAWF National Command',
+    status: 'Published'
+  });
+
+  // Certificate Management States
+  const [showAddCertificateModal, setShowAddCertificateModal] = useState(false);
+  const [editingCertificate, setEditingCertificate] = useState<CertificateRecord | null>(null);
+  const [viewingCertificate, setViewingCertificate] = useState<CertificateRecord | null>(null);
+  const [certificateUploading, setCertificateUploading] = useState(false);
+  const [newCertificate, setNewCertificate] = useState<Partial<CertificateRecord>>({
+    title: '',
+    description: '',
+    registrationNumber: '',
+    issuingAuthority: 'Ministry of MSME, Govt. of India',
+    issueDate: new Date().toLocaleDateString('en-GB'),
+    category: 'Government Accreditation',
+    fileUrl: '',
+    fileName: '',
+    fileType: 'pdf',
+    fileSize: '',
     status: 'Published'
   });
 
@@ -320,7 +395,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
         return null;
       };
 
-      const [statsData, offData, appData, grvData, donData, blData, actData, catData, setData] = await Promise.all([
+      const [statsData, offData, appData, grvData, donData, blData, actData, catData, certData, setData] = await Promise.all([
         safeFetchJson('/api/admin/stats'),
         safeFetchJson('/api/admin/officers'),
         safeFetchJson('/api/admin/memberships'),
@@ -329,6 +404,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
         safeFetchJson('/api/admin/blacklist'),
         safeFetchJson('/api/admin/activities'),
         safeFetchJson('/api/admin/activities/categories'),
+        safeFetchJson('/api/admin/certificates'),
         safeFetchJson('/api/admin/settings')
       ]);
 
@@ -351,6 +427,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
       if (blData && blData.success && Array.isArray(blData.data) && blData.data.length > 0) setBlacklist(blData.data);
       if (actData && actData.success && Array.isArray(actData.data) && actData.data.length > 0) setActivities(actData.data);
       if (catData && catData.success && Array.isArray(catData.data) && catData.data.length > 0) setActivityCategories(catData.data);
+      if (certData && certData.success && Array.isArray(certData.data) && certData.data.length > 0) setCertificates(certData.data);
       if (setData && setData.success && setData.data) setSettings(setData.data);
     } catch (err) {
       console.error('Error loading admin data:', err);
@@ -955,11 +1032,90 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
     reader.readAsDataURL(file);
   };
 
+  const handleActivityVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>, isEdit = false) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 100 * 1024 * 1024) {
+      setFeedbackMsg({ type: 'error', text: 'Video file size must be under 100MB.' });
+      return;
+    }
+
+    if (isEdit) setVideoUploadingEdit(true);
+    else setVideoUploadingAdd(true);
+
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64String = reader.result as string;
+      try {
+        const res = await fetch('/api/admin/activities/upload-video', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ videoBase64: base64String, fileName: file.name })
+        });
+        const data = await res.json();
+        const finalUrl = data?.url || base64String;
+
+        if (isEdit) {
+          setEditingActivity((prev: any) => (prev ? {
+            ...prev,
+            mediaType: 'video',
+            videoType: 'upload',
+            videoUrl: finalUrl
+          } : prev));
+        } else {
+          setNewActivity((prev) => ({
+            ...prev,
+            mediaType: 'video',
+            videoType: 'upload',
+            videoUrl: finalUrl
+          }));
+        }
+        setFeedbackMsg({ type: 'success', text: `Video "${file.name}" uploaded successfully!` });
+      } catch (err: any) {
+        // Fallback to local base64 preview
+        if (isEdit) {
+          setEditingActivity((prev: any) => (prev ? {
+            ...prev,
+            mediaType: 'video',
+            videoType: 'upload',
+            videoUrl: base64String
+          } : prev));
+        } else {
+          setNewActivity((prev) => ({
+            ...prev,
+            mediaType: 'video',
+            videoType: 'upload',
+            videoUrl: base64String
+          }));
+        }
+        setFeedbackMsg({ type: 'success', text: `Video "${file.name}" loaded.` });
+      } finally {
+        if (isEdit) setVideoUploadingEdit(false);
+        else setVideoUploadingAdd(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleCreateActivity = async (e: React.FormEvent) => {
     e.preventDefault();
+    const fallbackImage = newActivity.image || (
+      newActivity.mediaType === 'video' && newActivity.videoType === 'youtube' && newActivity.videoUrl
+        ? getYouTubeThumbnailUrl(newActivity.videoUrl) || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&q=80&w=600'
+        : 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&q=80&w=600'
+    );
+
     const act = {
       id: Date.now(),
-      ...newActivity
+      ...newActivity,
+      image: fallbackImage,
+      mediaType: newActivity.mediaType || 'image',
+      videoType: newActivity.videoType || 'youtube',
+      videoUrl: newActivity.videoUrl || ''
     };
 
     setActivities((prev) => [act, ...prev]);
@@ -973,6 +1129,9 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
       description: '',
       content: '',
       image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuA7D1Cv8Zz5hHkHWRsC2dBpAnYUkZ0ZCtxYoBPJYBBLwhi71gukNqmUaq1S7ds7-rpnQy9dgKR1hFGJCvg6fdzR0QNDcs1uncde15aH1Cj_ovJ49wdbEnyi3HcgYt1DebTQ0dmp7nUxPXX0IuIC0B3gzWoAkWgk8l0YIc9eLsbfB7lOIuzdvNL7lz5_EFlnw_PjTKNYWFcNsU5OnVumga3256O6DHiOZwcVeUFcPhTvMLAcYBENLi3UaA',
+      mediaType: 'image',
+      videoType: 'youtube',
+      videoUrl: '',
       author: 'RAWF National Command',
       status: 'Published'
     });
@@ -993,18 +1152,33 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
     e.preventDefault();
     if (!editingActivity) return;
 
-    setActivities((prev) => prev.map((a) => (a.id === editingActivity.id ? editingActivity : a)));
-    setFeedbackMsg({ type: 'success', text: `Activity "${editingActivity.title}" updated.` });
+    // Ensure fallback cover thumbnail if YouTube video is selected and no image is set
+    const fallbackImage = editingActivity.image || (
+      editingActivity.mediaType === 'video' && editingActivity.videoType === 'youtube' && editingActivity.videoUrl
+        ? getYouTubeThumbnailUrl(editingActivity.videoUrl) || ''
+        : ''
+    );
+
+    const updatedActivity = {
+      ...editingActivity,
+      image: fallbackImage,
+      mediaType: editingActivity.mediaType || 'image',
+      videoType: editingActivity.videoType || 'youtube',
+      videoUrl: editingActivity.videoUrl || ''
+    };
+
+    setActivities((prev) => prev.map((a) => (a.id === updatedActivity.id ? updatedActivity : a)));
+    setFeedbackMsg({ type: 'success', text: `Activity "${updatedActivity.title}" updated.` });
     setEditingActivity(null);
 
     try {
-      await fetch(`/api/admin/activities/${encodeURIComponent(editingActivity.id)}`, {
+      await fetch(`/api/admin/activities/${encodeURIComponent(updatedActivity.id)}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify(editingActivity)
+        body: JSON.stringify(updatedActivity)
       });
     } catch {}
   };
@@ -1084,6 +1258,177 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
     } catch {
       setFeedbackMsg({ type: 'error', text: 'Failed to delete category.' });
     }
+  };
+
+  // ========================================================
+  // CERTIFICATES & STATUTORY ACCREDITATIONS HANDLERS
+  // ========================================================
+  const handleCertificateFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, isEdit = false) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 25 * 1024 * 1024) {
+      setFeedbackMsg({ type: 'error', text: 'Document file size exceeds 25MB limit.' });
+      return;
+    }
+
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    const isImage = file.type.startsWith('image/');
+
+    if (!isPdf && !isImage) {
+      setFeedbackMsg({ type: 'error', text: 'Please upload a PDF document or image file (.pdf, .png, .jpg, .jpeg, .webp).' });
+      return;
+    }
+
+    setCertificateUploading(true);
+    const reader = new FileReader();
+
+    reader.onload = async () => {
+      const base64Data = reader.result as string;
+      const fileSizeStr = `${(file.size / 1024).toFixed(1)} KB`;
+      const detectedType: 'pdf' | 'image' = isPdf ? 'pdf' : 'image';
+
+      let targetUrl = base64Data;
+
+      if (token) {
+        try {
+          const res = await certificatesApi.uploadFile(base64Data, file.name, detectedType, token);
+          if (res.success && res.url) {
+            targetUrl = res.url;
+          }
+        } catch (err) {
+          console.warn('Direct server upload error, using encoded storage:', err);
+        }
+      }
+
+      if (isEdit) {
+        setEditingCertificate((prev) => prev ? {
+          ...prev,
+          fileUrl: targetUrl,
+          fileName: file.name,
+          fileType: detectedType,
+          fileSize: fileSizeStr
+        } : null);
+      } else {
+        setNewCertificate((prev) => ({
+          ...prev,
+          fileUrl: targetUrl,
+          fileName: file.name,
+          fileType: detectedType,
+          fileSize: fileSizeStr
+        }));
+      }
+
+      setCertificateUploading(false);
+      setFeedbackMsg({ type: 'success', text: `Document '${file.name}' attached successfully.` });
+    };
+
+    reader.onerror = () => {
+      setCertificateUploading(false);
+      setFeedbackMsg({ type: 'error', text: 'Failed to read document file.' });
+    };
+
+    reader.readAsDataURL(file);
+  };
+
+  const handleCreateCertificate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCertificate.title?.trim()) {
+      setFeedbackMsg({ type: 'error', text: 'Please enter a certificate title.' });
+      return;
+    }
+    if (!newCertificate.description?.trim()) {
+      setFeedbackMsg({ type: 'error', text: 'Please enter a description for this certificate.' });
+      return;
+    }
+    if (!newCertificate.fileUrl) {
+      setFeedbackMsg({ type: 'error', text: 'Please upload a PDF or image document.' });
+      return;
+    }
+
+    const certToSave: CertificateRecord = {
+      id: `cert-${Date.now()}`,
+      title: newCertificate.title.trim(),
+      description: newCertificate.description.trim(),
+      registrationNumber: newCertificate.registrationNumber?.trim() || 'Statutory Order',
+      issuingAuthority: newCertificate.issuingAuthority?.trim() || 'Government of India',
+      issueDate: newCertificate.issueDate?.trim() || new Date().toLocaleDateString('en-GB'),
+      category: (newCertificate.category as any) || 'Government Accreditation',
+      fileUrl: newCertificate.fileUrl,
+      fileName: newCertificate.fileName || 'certificate-document.pdf',
+      fileType: newCertificate.fileType || 'pdf',
+      fileSize: newCertificate.fileSize || '10.5 KB',
+      status: (newCertificate.status as any) || 'Published',
+      createdAt: new Date().toISOString()
+    };
+
+    if (token) {
+      try {
+        await certificatesApi.create(certToSave, token);
+      } catch (err) {
+        console.warn('API sync failed, saving locally:', err);
+      }
+    }
+
+    setCertificates((prev) => [certToSave, ...prev]);
+    setShowAddCertificateModal(false);
+    setNewCertificate({
+      title: '',
+      description: '',
+      registrationNumber: '',
+      issuingAuthority: 'Ministry of MSME, Govt. of India',
+      issueDate: new Date().toLocaleDateString('en-GB'),
+      category: 'Government Accreditation',
+      fileUrl: '',
+      fileName: '',
+      fileType: 'pdf',
+      fileSize: '',
+      status: 'Published'
+    });
+    setFeedbackMsg({ type: 'success', text: `Certificate '${certToSave.title}' uploaded and published successfully.` });
+  };
+
+  const handleUpdateCertificate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCertificate || !editingCertificate.id) return;
+
+    if (!editingCertificate.title?.trim()) {
+      setFeedbackMsg({ type: 'error', text: 'Certificate title cannot be blank.' });
+      return;
+    }
+    if (!editingCertificate.fileUrl) {
+      setFeedbackMsg({ type: 'error', text: 'Document file cannot be empty.' });
+      return;
+    }
+
+    if (token) {
+      try {
+        await certificatesApi.update(editingCertificate.id, editingCertificate, token);
+      } catch (err) {
+        console.warn('API update failed, saving locally:', err);
+      }
+    }
+
+    setCertificates((prev) => prev.map((c) => (c.id === editingCertificate.id ? editingCertificate : c)));
+    setEditingCertificate(null);
+    setFeedbackMsg({ type: 'success', text: `Certificate '${editingCertificate.title}' updated successfully.` });
+  };
+
+  const handleDeleteCertificate = async (cert: CertificateRecord) => {
+    if (!window.confirm(`Are you sure you want to remove certificate "${cert.title}"? This cannot be undone.`)) {
+      return;
+    }
+
+    if (token) {
+      try {
+        await certificatesApi.delete(cert.id, token);
+      } catch (err) {
+        console.warn('API delete failed, removing locally:', err);
+      }
+    }
+
+    setCertificates((prev) => prev.filter((c) => c.id !== cert.id));
+    setFeedbackMsg({ type: 'success', text: `Certificate '${cert.title}' removed.` });
   };
 
   // 1-Click JSON Backup
@@ -1171,6 +1516,104 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
     setStagedLogoFileName(null);
     setLogoUploadMsg('✓ Reset to standard official RAWF emblem.');
     setTimeout(() => setLogoUploadMsg(null), 4000);
+  };
+
+  // ==========================================
+  // AUTHORIZED SIGNATURE HANDLERS
+  // ==========================================
+  const handleAdminSignatureSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.match(/^image\/(png|jpeg|webp)/i)) {
+      setSignatureUploadMsg('Error: Please select a valid PNG, JPG, or WEBP image.');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setSignatureUploadMsg('Error: File size exceeds 5MB limit. Please upload a smaller signature image.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setStagedSignatureData(reader.result);
+        setStagedSignatureFileName(file.name);
+        setSignatureUploadMsg(null);
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleSaveUploadedSignature = async () => {
+    if (!stagedSignatureData) return;
+
+    setSignatureUploadLoading(true);
+    setSignatureUploadMsg('Saving authorized signature and updating all documents...');
+
+    try {
+      const res = await fetch('/api/upload-signature', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: stagedSignatureData })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        localStorage.setItem('rawf_custom_signature_data', stagedSignatureData);
+        localStorage.setItem('rawf_signature_version', String(Date.now()));
+        window.dispatchEvent(new CustomEvent('rawf_signature_updated', { detail: { src: stagedSignatureData } }));
+        window.dispatchEvent(new Event('storage'));
+
+        setSignatureTimestamp(Date.now());
+        setCurrentSignatureUrl(stagedSignatureData);
+        setStagedSignatureData(null);
+        setStagedSignatureFileName(null);
+        setSignatureUploadMsg('✓ Authorized signature image saved successfully and automatically applied to all ID Cards, Appointment Letters, and official documents!');
+      } else {
+        setSignatureUploadMsg(`Error: ${data.message || 'Failed to save signature.'}`);
+      }
+    } catch {
+      localStorage.setItem('rawf_custom_signature_data', stagedSignatureData);
+      localStorage.setItem('rawf_signature_version', String(Date.now()));
+      window.dispatchEvent(new CustomEvent('rawf_signature_updated', { detail: { src: stagedSignatureData } }));
+      window.dispatchEvent(new Event('storage'));
+
+      setSignatureTimestamp(Date.now());
+      setCurrentSignatureUrl(stagedSignatureData);
+      setStagedSignatureData(null);
+      setStagedSignatureFileName(null);
+      setSignatureUploadMsg('✓ Signature image saved locally and applied to all official documents!');
+    } finally {
+      setSignatureUploadLoading(false);
+      setTimeout(() => setSignatureUploadMsg(null), 6000);
+    }
+  };
+
+  const handleCancelStagedSignature = () => {
+    setStagedSignatureData(null);
+    setStagedSignatureFileName(null);
+    setSignatureUploadMsg(null);
+  };
+
+  const handleResetDefaultSignature = async () => {
+    localStorage.removeItem('rawf_custom_signature_data');
+    localStorage.removeItem('rawf_signature_version');
+    window.dispatchEvent(new CustomEvent('rawf_signature_updated', { detail: { src: null } }));
+    window.dispatchEvent(new Event('storage'));
+
+    try {
+      await fetch('/api/reset-signature', { method: 'POST' });
+    } catch {}
+
+    setSignatureTimestamp(Date.now());
+    setCurrentSignatureUrl(null);
+    setStagedSignatureData(null);
+    setStagedSignatureFileName(null);
+    setSignatureUploadMsg('✓ Reset to standard official cursive signatory format.');
+    setTimeout(() => setSignatureUploadMsg(null), 4000);
   };
 
   const handleSendTestEmail = async () => {
@@ -1379,6 +1822,14 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
 
           <div className="flex items-center gap-2.5">
             <button
+              onClick={() => setShowQuotationModal(true)}
+              className="px-3.5 py-1.5 bg-[#2b579a] hover:bg-[#1e3e70] text-white text-xs font-bold uppercase rounded flex items-center gap-1.5 cursor-pointer transition-all shadow-xs"
+              title="Official Commercial Project Quotation & Word (.docx) Specification"
+            >
+              <span className="material-symbols-outlined text-[16px]">description</span>
+              <span>Quotation (.docx)</span>
+            </button>
+            <button
               onClick={() => onNavigate('home')}
               className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold uppercase rounded flex items-center gap-1 cursor-pointer transition-colors"
             >
@@ -1430,6 +1881,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
             { id: 'donations', label: `80G Donations (${donations.length})`, icon: 'volunteer_activism' },
             { id: 'blacklist', label: `Blacklist Registry (${blacklist.length})`, icon: 'block' },
             { id: 'activities', label: `Activities / Blog (${activities.length})`, icon: 'article' },
+            { id: 'certificates', label: `Certificates (${certificates.length})`, icon: 'workspace_premium' },
             { id: 'settings', label: 'System & cPanel Config', icon: 'settings' }
           ].map((tab) => (
             <button
@@ -1522,7 +1974,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                     person_add
                   </span>
                   <strong className="text-xs font-bold text-slate-900 block group-hover:text-[#0d47a1]">
-                    Appoint New Officer & Generate ID
+                    Appoint New Officer &amp; Generate ID
                   </strong>
                   <span className="text-[11px] text-slate-500">
                     Assign UID, photo, role, and auto-generate official ID card.
@@ -1846,8 +2298,17 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                       <td className="p-3 font-bold text-slate-900">
                         {app.fullName}
                       </td>
-                      <td className="p-3 font-semibold text-[#0d47a1]">
-                        {app.wing}
+                      <td className="p-3">
+                        <div className="font-semibold text-[#0d47a1]">{app.wing}</div>
+                        {app.transactionId || app.utrNumber ? (
+                          <div className="text-[10px] font-mono text-emerald-700 font-bold mt-0.5">
+                            Fee: ₹{app.feeAmount || getRoleFee(app.wing)} • UTR: {app.transactionId || app.utrNumber}
+                          </div>
+                        ) : (
+                          <div className="text-[10px] font-mono text-slate-400 mt-0.5">
+                            Fee: ₹{app.feeAmount || getRoleFee(app.wing)}
+                          </div>
+                        )}
                       </td>
                       <td className="p-3 text-slate-600">
                         {app.state}
@@ -2285,11 +2746,20 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                   {filteredActivities.map((act) => (
                     <tr key={act.id} className="hover:bg-slate-50/80 transition-colors">
                       <td className="p-3">
-                        <img
-                          src={act.image}
-                          alt={act.title}
-                          className="w-14 h-11 object-cover rounded border border-slate-200"
-                        />
+                        <div className="relative w-14 h-11 rounded border border-slate-200 overflow-hidden bg-slate-900">
+                          <img
+                            src={act.image || (act.mediaType === 'video' && act.videoType === 'youtube' && act.videoUrl ? getYouTubeThumbnailUrl(act.videoUrl) || '' : '') || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&q=80&w=200'}
+                            alt={act.title}
+                            className="w-full h-full object-cover"
+                          />
+                          {act.mediaType === 'video' && (
+                            <span className="absolute inset-0 bg-black/40 flex items-center justify-center text-white" title={act.videoType === 'youtube' ? 'YouTube Video Dispatch' : 'Uploaded Video Dispatch'}>
+                              <span className="material-symbols-outlined text-[18px] text-red-500">
+                                {act.videoType === 'youtube' ? 'smart_display' : 'play_circle'}
+                              </span>
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="p-3 max-w-sm">
                         <span className="font-bold text-slate-900 block line-clamp-1 text-sm">
@@ -2298,11 +2768,24 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                         <span className="text-slate-500 text-[11px] line-clamp-2 mt-0.5">
                           {act.description}
                         </span>
-                        {act.author && (
-                          <span className="text-[10px] text-slate-400 font-mono block mt-0.5">
-                            Author: {act.author}
-                          </span>
-                        )}
+                        <div className="flex items-center gap-1.5 mt-1">
+                          {act.mediaType === 'video' ? (
+                            <span className="px-1.5 py-0.2 bg-red-50 text-red-700 border border-red-200 text-[9.5px] font-bold rounded flex items-center gap-0.5">
+                              <span className="material-symbols-outlined text-[11px]">videocam</span>
+                              <span>{act.videoType === 'youtube' ? 'YouTube' : 'Video'}</span>
+                            </span>
+                          ) : (
+                            <span className="px-1.5 py-0.2 bg-slate-100 text-slate-600 border border-slate-200 text-[9.5px] font-bold rounded flex items-center gap-0.5">
+                              <span className="material-symbols-outlined text-[11px]">image</span>
+                              <span>Photo</span>
+                            </span>
+                          )}
+                          {act.author && (
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              By {act.author}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="p-3 whitespace-nowrap">
                         <span className="px-2 py-0.5 bg-blue-50 text-[#0d47a1] border border-blue-200 font-mono text-[10px] font-bold rounded uppercase">
@@ -2342,7 +2825,17 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
 
                         {/* EDIT BUTTON */}
                         <button
-                          onClick={() => setEditingActivity({ ...act })}
+                          onClick={() => {
+                            const detectedMediaType = act.mediaType || (act.videoUrl ? 'video' : 'image');
+                            const detectedVideoType = act.videoType || (act.videoUrl && isYouTubeUrl(act.videoUrl) ? 'youtube' : 'upload');
+                            setEditingActivity({
+                              ...act,
+                              mediaType: detectedMediaType,
+                              videoType: detectedVideoType,
+                              videoUrl: act.videoUrl || '',
+                              image: act.image || ''
+                            });
+                          }}
                           className="px-2 py-1 bg-blue-50 hover:bg-[#0d47a1] text-[#0d47a1] hover:text-white rounded text-[11px] font-bold uppercase cursor-pointer inline-flex items-center gap-1"
                           title="Edit Activity"
                         >
@@ -2366,6 +2859,178 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                     <tr>
                       <td colSpan={6} className="p-8 text-center text-slate-400 text-xs">
                         No activity articles found matching search criteria.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* TAB: CERTIFICATES & STATUTORY ACCREDITATIONS MANAGEMENT  */}
+        {/* ======================================================== */}
+        {activeTab === 'certificates' && (
+          <div className="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden space-y-4 p-5 animate-fadeIn">
+            {/* Tab Header & Control Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="font-headline font-bold text-base text-[#0d47a1] uppercase flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[#0d47a1] text-xl">workspace_premium</span>
+                  Statutory Certificates &amp; Institutional Accreditations
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Upload PDF or image certificates (MSME UDYAM, NITI Aayog Darpan, IFA 760 Trust Charter, Tax Exemption orders). Public visitors can view and download these verified documents.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  type="text"
+                  value={certificateSearch}
+                  onChange={(e) => setCertificateSearch(e.target.value)}
+                  placeholder="Search certificates..."
+                  className="bg-slate-50 border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-[#0d47a1]"
+                />
+
+                <select
+                  value={certificateFilterCategory}
+                  onChange={(e) => setCertificateFilterCategory(e.target.value)}
+                  className="bg-slate-50 border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-700 font-semibold focus:outline-none"
+                >
+                  <option value="All">All Categories</option>
+                  <option value="Government Accreditation">Govt Accreditations</option>
+                  <option value="Trust Charter">Trust Charters</option>
+                  <option value="Tax Exemption">Tax Exemption</option>
+                  <option value="Statutory License">Statutory Licenses</option>
+                </select>
+
+                <button
+                  onClick={() => setShowAddCertificateModal(true)}
+                  className="px-3.5 py-1.5 bg-gradient-to-r from-[#0d47a1] to-[#1565c0] hover:from-[#0a3875] hover:to-[#0d47a1] text-white rounded text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-xs transition-all border border-amber-400"
+                >
+                  <span className="material-symbols-outlined text-[16px]">upload_file</span>
+                  <span>+ Upload Certificate</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Certificates Table */}
+            <div className="overflow-x-auto border border-slate-200 rounded-lg">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-slate-600 font-bold uppercase border-b border-slate-200">
+                  <tr>
+                    <th className="p-3 w-16 text-center">Type</th>
+                    <th className="p-3">Title &amp; Reg. Number</th>
+                    <th className="p-3">Issuing Authority &amp; Category</th>
+                    <th className="p-3">File Info</th>
+                    <th className="p-3">Status</th>
+                    <th className="p-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {certificates
+                    .filter((c) => {
+                      const matchesSearch =
+                        (c.title || '').toLowerCase().includes(certificateSearch.toLowerCase()) ||
+                        (c.description || '').toLowerCase().includes(certificateSearch.toLowerCase()) ||
+                        (c.registrationNumber || '').toLowerCase().includes(certificateSearch.toLowerCase()) ||
+                        (c.issuingAuthority || '').toLowerCase().includes(certificateSearch.toLowerCase());
+                      const matchesCategory =
+                        certificateFilterCategory === 'All' ||
+                        (c.category && c.category.toLowerCase() === certificateFilterCategory.toLowerCase());
+                      return matchesSearch && matchesCategory;
+                    })
+                    .map((cert) => {
+                      const isPdf = cert.fileType === 'pdf' || (cert.fileUrl && cert.fileUrl.toLowerCase().endsWith('.pdf'));
+                      return (
+                        <tr key={cert.id} className="hover:bg-slate-50/80 transition-colors">
+                          <td className="p-3 text-center">
+                            <div className={`w-10 h-10 mx-auto rounded-lg flex items-center justify-center font-bold ${
+                              isPdf ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-blue-50 text-[#0d47a1] border border-blue-200'
+                            }`}>
+                              <span className="material-symbols-outlined text-[20px]">
+                                {isPdf ? 'picture_as_pdf' : 'image'}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <div className="font-bold text-slate-900 text-sm">{cert.title}</div>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="font-mono text-[11px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
+                                {cert.registrationNumber || 'Statutory Order'}
+                              </span>
+                              <span className="text-[11px] text-slate-500 truncate max-w-md">
+                                {cert.description}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <div className="font-semibold text-slate-800">{cert.issuingAuthority || 'Govt of India'}</div>
+                            <div className="text-[11px] text-slate-500 font-medium">{cert.category || 'Accreditation'}</div>
+                          </td>
+                          <td className="p-3 font-mono text-[11px]">
+                            <div className="text-slate-700 font-medium truncate max-w-xs">{cert.fileName || 'document.pdf'}</div>
+                            <div className="text-slate-400 text-[10px]">{cert.fileSize || 'Standard PDF'} · {cert.issueDate || 'Active'}</div>
+                          </td>
+                          <td className="p-3">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                              cert.status === 'Published'
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : 'bg-slate-100 text-slate-600 border border-slate-200'
+                            }`}>
+                              {cert.status || 'Published'}
+                            </span>
+                          </td>
+                          <td className="p-3 text-right whitespace-nowrap">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => setViewingCertificate(cert)}
+                                className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-[#0d47a1] border border-blue-200 rounded text-xs font-bold uppercase flex items-center gap-1 cursor-pointer transition-colors"
+                                title="View Document"
+                              >
+                                <span className="material-symbols-outlined text-[13px]">visibility</span>
+                                <span>View</span>
+                              </button>
+
+                              <button
+                                onClick={() => setEditingCertificate(cert)}
+                                className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded text-xs font-bold uppercase flex items-center gap-1 cursor-pointer transition-colors"
+                                title="Edit Certificate"
+                              >
+                                <span className="material-symbols-outlined text-[13px]">edit</span>
+                                <span>Edit</span>
+                              </button>
+
+                              <a
+                                href={cert.fileUrl}
+                                download={cert.fileName || 'certificate.pdf'}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded text-xs font-bold uppercase flex items-center gap-1 transition-colors"
+                                title="Download File"
+                              >
+                                <span className="material-symbols-outlined text-[13px]">download</span>
+                              </a>
+
+                              <button
+                                onClick={() => handleDeleteCertificate(cert)}
+                                className="px-2 py-1 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded text-xs font-bold uppercase flex items-center gap-1 cursor-pointer transition-colors"
+                                title="Delete Certificate"
+                              >
+                                <span className="material-symbols-outlined text-[13px]">delete</span>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+
+                  {certificates.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="p-8 text-center text-slate-400 text-xs">
+                        No certificates uploaded yet. Click "+ Upload Certificate" to add your first statutory registration.
                       </td>
                     </tr>
                   )}
@@ -2681,6 +3346,254 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                 </div>
               </div>
             </div>
+
+            {/* Authorized Signatory & Official Signature Management */}
+            <div className="lg:col-span-12 bg-white border border-slate-200 rounded-xl p-6 shadow-xs space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+                <div className="flex items-center gap-3">
+                  <span className="material-symbols-outlined text-[#0d47a1] text-[28px]">history_edu</span>
+                  <div>
+                    <h3 className="font-headline font-bold text-base text-slate-900 uppercase">
+                      Authorized Signatory &amp; Signature Management
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Upload the official authorized signature image. Once saved, it automatically displays across Officer Digital ID Cards, Official Appointment Letters, Verification Credentials, and all official statutory documents with auto-adjusted dimensions.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="file"
+                    ref={signatureInputRef}
+                    accept="image/png,image/jpeg,image/webp"
+                    className="hidden"
+                    onChange={handleAdminSignatureSelect}
+                  />
+                  <button
+                    onClick={() => signatureInputRef.current?.click()}
+                    className="px-4 py-2 bg-[#0d47a1] hover:bg-blue-900 text-white rounded font-bold text-xs uppercase flex items-center gap-1.5 cursor-pointer shadow-xs transition-all"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">upload_file</span>
+                    <span>Choose / Upload Signature Image</span>
+                  </button>
+
+                  <button
+                    onClick={handleResetDefaultSignature}
+                    className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded font-semibold text-xs uppercase flex items-center gap-1 cursor-pointer transition-all border border-slate-200"
+                    title="Restore standard official cursive signatory format"
+                  >
+                    <span className="material-symbols-outlined text-[15px]">restart_alt</span>
+                    <span>Reset Default</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* STAGED SIGNATURE READY TO SAVE BANNER */}
+              {stagedSignatureData && (
+                <div className="p-4 sm:p-5 bg-gradient-to-r from-amber-50 to-emerald-50 border-2 border-emerald-500 rounded-xl space-y-4 shadow-md animate-scaleUp">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-emerald-600 text-[24px]">pending_actions</span>
+                      <div>
+                        <h4 className="font-headline font-black text-sm uppercase text-slate-900">
+                          New Authorized Signature Selected — Ready to Save
+                        </h4>
+                        <span className="text-xs text-slate-600">
+                          File: <strong>{stagedSignatureFileName || 'Uploaded Signature'}</strong>. Review live previews below and click "Save Signature Image" to apply across all documents.
+                        </span>
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 bg-amber-500 text-slate-950 font-bold text-[10px] uppercase font-mono rounded-full animate-pulse">
+                      Action Required: Click Save
+                    </span>
+                  </div>
+
+                  {/* Side-by-side Visual Preview Comparison */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                    {/* Current Active */}
+                    <div className="bg-white p-3.5 rounded-lg border border-slate-200 flex items-center gap-3">
+                      <div className="w-36 h-16 bg-slate-50 border border-slate-200 rounded p-1 shrink-0 flex items-center justify-center overflow-hidden">
+                        <AuthorizedSignature
+                          className="h-full w-full"
+                          imgClassName="max-h-full max-w-full object-contain"
+                          fallbackText="Manoj Chauhan"
+                          fallbackClassName="font-id-sign text-slate-800 text-[18px] leading-none select-none font-bold"
+                          alt="Current Active Signature"
+                        />
+                      </div>
+                      <div className="text-xs">
+                        <span className="font-bold text-slate-500 uppercase block text-[10px]">Current Active</span>
+                        <span className="text-slate-800 font-semibold">Live in System Now</span>
+                      </div>
+                    </div>
+
+                    {/* Staged New Preview */}
+                    <div className="bg-white p-3.5 rounded-lg border-2 border-emerald-500 flex items-center gap-3 shadow-xs">
+                      <div className="w-36 h-16 bg-slate-50 border border-emerald-400 rounded p-1 shrink-0 flex items-center justify-center overflow-hidden">
+                        <img
+                          src={stagedSignatureData}
+                          alt="New Uploaded Signature Preview"
+                          className="max-h-full max-w-full object-contain filter contrast-125"
+                        />
+                      </div>
+                      <div className="text-xs">
+                        <span className="font-bold text-emerald-700 uppercase block text-[10px]">New Signature (Unsaved)</span>
+                        <span className="text-emerald-900 font-bold">Ready to Commit</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* PROMINENT SAVE BUTTONS ROW */}
+                  <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-emerald-200">
+                    <button
+                      onClick={handleSaveUploadedSignature}
+                      disabled={signatureUploadLoading}
+                      className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-lg font-bold text-xs uppercase flex items-center gap-2 cursor-pointer shadow-md transition-all disabled:opacity-50"
+                    >
+                      {signatureUploadLoading ? (
+                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                      )}
+                      <span>Save Signature Image Everywhere</span>
+                    </button>
+
+                    <button
+                      onClick={handleCancelStagedSignature}
+                      disabled={signatureUploadLoading}
+                      className="px-4 py-2.5 bg-white hover:bg-slate-100 text-slate-700 rounded-lg font-semibold text-xs uppercase flex items-center gap-1.5 cursor-pointer border border-slate-300 transition-all shadow-xs"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">cancel</span>
+                      <span>Discard / Cancel</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Status & Feedback Message */}
+              {signatureUploadMsg && (
+                <div
+                  className={`p-3 rounded-lg text-xs font-mono font-semibold flex items-center gap-2 ${
+                    signatureUploadMsg.startsWith('Error')
+                      ? 'bg-red-50 text-red-700 border border-red-200'
+                      : 'bg-emerald-50 text-emerald-800 border border-emerald-300'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[18px]">
+                    {signatureUploadMsg.startsWith('Error') ? 'error' : 'check_circle'}
+                  </span>
+                  <span>{signatureUploadMsg}</span>
+                </div>
+              )}
+
+              {/* Live Multi-Document Preview Showcase */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* 1. ID Card Context */}
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-800 uppercase flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-blue-600 text-[16px]">badge</span>
+                      Officer Digital ID Card Context
+                    </span>
+                    <span className="px-2 py-0.5 bg-blue-100 text-blue-800 font-mono text-[9px] font-bold rounded">
+                      AUTO-DIMENSION: 130x30px
+                    </span>
+                  </div>
+                  <div className="bg-white p-3 rounded-lg border border-slate-300 flex items-center justify-between shadow-2xs">
+                    <div className="text-[10px] font-mono text-slate-400">
+                      [ Barcode Area ]
+                    </div>
+                    <div className="flex flex-col items-end justify-end text-right">
+                      <div className="max-w-[130px] flex items-end justify-end">
+                        <AuthorizedSignature
+                          className="w-auto flex items-end justify-end"
+                          imgClassName="max-h-[28px] max-w-[130px] object-contain object-bottom"
+                          fallbackText="Manoj Chauhan"
+                          fallbackClassName="font-id-sign text-slate-800 text-[19px] leading-none select-none font-bold pr-0.5 block"
+                          alt="Authorised Signatory"
+                        />
+                      </div>
+                      <div className="font-id-sans font-bold text-[#1b2a72] text-[10.5px] tracking-tight leading-none mt-0 select-none">
+                        Authorised Signatory
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-snug">
+                    Fitted on the bottom-right front side of every official encrypted identity card.
+                  </p>
+                </div>
+
+                {/* 2. Appointment Letter Context */}
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-800 uppercase flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-emerald-600 text-[16px]">description</span>
+                      Appointment Letter Context
+                    </span>
+                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 font-mono text-[9px] font-bold rounded">
+                      AUTO-DIMENSION: 170x48px
+                    </span>
+                  </div>
+                  <div className="bg-white p-3 rounded-lg border border-slate-300 flex items-center justify-between shadow-2xs">
+                    <div className="w-10 h-10 rounded-full border border-red-400 flex items-center justify-center text-[7px] font-mono text-red-500 font-bold text-center">
+                      SEAL
+                    </div>
+                    <div className="text-right">
+                      <div className="h-10 max-w-[150px] flex items-end justify-end ml-auto mb-0.5">
+                        <AuthorizedSignature
+                          className="h-full w-auto"
+                          imgClassName="h-full max-h-[40px] max-w-[150px] object-contain"
+                          fallbackText="Manoj Chauhan"
+                          fallbackClassName="font-serif italic font-bold text-sm text-slate-800 select-none font-['Brush_Script_MT',cursive,'Caveat']"
+                          alt="Authorised Signatory"
+                        />
+                      </div>
+                      <div className="font-headline font-black text-[#0b3b95] text-xs uppercase leading-tight">
+                        Manoj Chauhan
+                      </div>
+                      <div className="text-[9px] text-slate-500 font-semibold leading-tight">
+                        Founder • Supreme Command
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-snug">
+                    Rendered above the signatory mandate block on printed appointment letters and certificates.
+                  </p>
+                </div>
+              </div>
+
+              {/* Status Banner */}
+              <div className="flex flex-col sm:flex-row items-center gap-6 p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                <div className="w-24 h-16 sm:w-28 sm:h-20 bg-white border-2 border-slate-200 rounded-xl p-2 shadow-xs flex items-center justify-center shrink-0">
+                  <AuthorizedSignature
+                    className="h-full w-full"
+                    imgClassName="max-h-full max-w-full object-contain"
+                    fallbackText="Manoj Chauhan"
+                    fallbackClassName="font-id-sign text-slate-800 text-[18px] leading-none select-none font-bold"
+                    alt="Active Signature"
+                  />
+                </div>
+                <div className="space-y-1.5 text-xs text-slate-700">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-mono text-slate-400">Target File:</span>
+                    <code className="bg-slate-200 px-2 py-0.5 rounded font-mono text-blue-900 font-bold">/rawf-signature.png</code>
+                    <span className="px-2 py-0.5 bg-green-100 text-emerald-800 font-mono text-[10px] font-bold rounded">
+                      {currentSignatureUrl ? 'CUSTOM IMAGE ACTIVE' : 'DEFAULT SCRIPT ACTIVE'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-slate-400">Coverage:</span>
+                    <span className="font-mono text-slate-900 font-semibold">
+                      Officer Digital ID Card, Official Appointment Letters, Download Portal, Verification Certificates
+                    </span>
+                  </div>
+                  <p className="text-slate-500 text-[11px] pt-1 leading-relaxed">
+                    The <code>AuthorizedSignature</code> component dynamically calculates bounds and scales any uploaded signature format (transparent PNG recommended) without stretching or distortion.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -2839,8 +3752,14 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="font-serif italic font-bold text-base text-slate-800 pr-1 select-none font-['Brush_Script_MT',cursive,'Caveat']">
-                        Manoj Chauhan
+                      <div className="h-12 max-w-[170px] flex items-end justify-end ml-auto mb-1">
+                        <AuthorizedSignature
+                          className="h-full w-auto"
+                          imgClassName="h-full max-h-[48px] max-w-[170px] object-contain"
+                          fallbackText="Manoj Chauhan"
+                          fallbackClassName="font-serif italic font-bold text-base text-slate-800 pr-1 select-none font-['Brush_Script_MT',cursive,'Caveat']"
+                          alt="Authorised Signatory Manoj Chauhan"
+                        />
                       </div>
                       <div className="font-headline font-black text-[#0b3b95] uppercase">
                         Manoj Chauhan
@@ -3094,29 +4013,28 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                     onChange={(e) => setEditingOfficer({ ...editingOfficer, designation: e.target.value })}
                     className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-slate-900"
                   >
-                    <optgroup label="District level">
-                      <option>District Director</option>
-                      <option>Districts Chief</option>
-                      <option>District Incharge</option>
-                      <option>Investigation Officer</option>
-                      <option>Information officer</option>
+                    <option value="">Select Designation...</option>
+                    <option>Only Member</option>
+                    <optgroup label="2. District Level">
+                      <option>District President</option>
                       <option>District Special Officer</option>
+                      <option>District Vice President</option>
+                      <option>District Director</option>
+                      <option>District Incharge</option>
                     </optgroup>
-                    <optgroup label="State level">
-                      <option>State Director</option>
+                    <optgroup label="3. State Level">
                       <option>State President</option>
+                      <option>State District Special Officer</option>
+                      <option>State Vice President</option>
+                      <option>State Director</option>
                       <option>State Incharge</option>
-                      <option>State Investigation Officer</option>
-                      <option>State Information Officer</option>
                     </optgroup>
-                    <optgroup label="National level">
+                    <optgroup label="4. National Level">
                       <option>Founder</option>
-                      <option>National Secretary</option>
                       <option>National Investigation Officer</option>
-                      <option>National co-ordinator</option>
-                      <option>Director General (Crime & Vigilance Cell)</option>
-                      <option>National Deputy Director (India)</option>
-                      <option>Chief Legal Advisor & Advocate</option>
+                      <option>National Incharge</option>
+                      <option>National Deputy Security</option>
+                      <option>National Special Officer</option>
                     </optgroup>
                   </select>
                 </div>
@@ -3345,6 +4263,18 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                   <strong className="text-[#0d47a1] text-sm">{viewingApplication.wing}</strong>
                 </div>
                 <div>
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Accreditation Fee</span>
+                  <strong className="text-emerald-700 text-sm">
+                    ₹{(viewingApplication.feeAmount || getRoleFee(viewingApplication.wing)).toLocaleString('en-IN')}
+                  </strong>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Transaction ID / UTR</span>
+                  <span className="font-mono text-slate-800 font-bold bg-white px-2 py-0.5 rounded border border-slate-200 inline-block mt-0.5">
+                    {viewingApplication.transactionId || viewingApplication.utrNumber || 'Pending / Verification Required'}
+                  </span>
+                </div>
+                <div>
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">Territorial State</span>
                   <strong className="text-slate-800">{viewingApplication.state}</strong>
                 </div>
@@ -3526,29 +4456,28 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                     onChange={(e) => setEditingApplication({ ...editingApplication, wing: e.target.value, designation: e.target.value })}
                     className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-slate-900 cursor-pointer focus:outline-none focus:border-[#0d47a1]"
                   >
-                    <option value="">Select Level &amp; Designation...</option>
-                    <optgroup label="✔️ District level">
-                      <option value="District Director">1) District Director</option>
-                      <option value="Districts Chief">2) Districts Chief</option>
-                      <option value="District Incharge">3) District Incharge</option>
-                      <option value="Investigation Officer">4) Investigation Officer</option>
-                      <option value="Information officer">5) Information officer</option>
-                      <option value="District Special Officer">6) District Special Officer</option>
+                    <option value="">Select Role / Designation...</option>
+                    <option value="Only Member">1. Only Member</option>
+                    <optgroup label="2. District Level">
+                      <option value="District President">a) District President</option>
+                      <option value="District Special Officer">b) District Special Officer</option>
+                      <option value="District Vice President">c) District Vice President</option>
+                      <option value="District Director">d) District Director</option>
+                      <option value="District Incharge">e) District Incharge</option>
                     </optgroup>
-                    <optgroup label="✔️ State level">
-                      <option value="State Director">1) State Director</option>
-                      <option value="State President">2) State President</option>
-                      <option value="State Incharge">3) State Incharge</option>
-                      <option value="State Investigation Officer">4) State Investigation Officer</option>
-                      <option value="State Information Officer">5) State Information Officer</option>
+                    <optgroup label="3. State Level">
+                      <option value="State President">a) State President</option>
+                      <option value="State District Special Officer">b) State District Special Officer</option>
+                      <option value="State Vice President">c) State Vice President</option>
+                      <option value="State Director">d) State Director</option>
+                      <option value="State Incharge">e) State Incharge</option>
                     </optgroup>
-                    <optgroup label="✔️ National level">
-                      <option value="National Secretary">1) National Secretary</option>
-                      <option value="National Investigation Officer">2) National Investigation Officer</option>
-                      <option value="National co-ordinator">3) National co-ordinator</option>
-                      <option value="Director General (Crime & Vigilance Cell)">4) Director General (Crime & Vigilance Cell)</option>
-                      <option value="National Deputy Director (India)">5) National Deputy Director (India)</option>
-                      <option value="Chief Legal Advisor & Advocate">6) Chief Legal Advisor & Advocate</option>
+                    <optgroup label="4. National Level">
+                      <option value="Founder">Founder</option>
+                      <option value="National Investigation Officer">a) National Investigation Officer</option>
+                      <option value="National Incharge">b) National Incharge</option>
+                      <option value="National Deputy Security">c) National Deputy Security</option>
+                      <option value="National Special Officer">d) National Special Officer</option>
                     </optgroup>
                   </select>
                 </div>
@@ -3813,28 +4742,28 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                     onChange={(e) => setNewOfficer({ ...newOfficer, designation: e.target.value })}
                     className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-slate-900"
                   >
-                    <optgroup label="District level">
-                      <option>District Director</option>
-                      <option>Districts Chief</option>
-                      <option>District Incharge</option>
-                      <option>Investigation Officer</option>
-                      <option>Information officer</option>
+                    <option value="">Select Designation...</option>
+                    <option>Only Member</option>
+                    <optgroup label="2. District Level">
+                      <option>District President</option>
                       <option>District Special Officer</option>
+                      <option>District Vice President</option>
+                      <option>District Director</option>
+                      <option>District Incharge</option>
                     </optgroup>
-                    <optgroup label="State level">
-                      <option>State Director</option>
+                    <optgroup label="3. State Level">
                       <option>State President</option>
+                      <option>State District Special Officer</option>
+                      <option>State Vice President</option>
+                      <option>State Director</option>
                       <option>State Incharge</option>
-                      <option>State Investigation Officer</option>
-                      <option>State Information Officer</option>
                     </optgroup>
-                    <optgroup label="National level">
-                      <option>National Secretary</option>
+                    <optgroup label="4. National Level">
+                      <option>Founder</option>
                       <option>National Investigation Officer</option>
-                      <option>National co-ordinator</option>
-                      <option>Director General (Crime & Vigilance Cell)</option>
-                      <option>National Deputy Director (India)</option>
-                      <option>Chief Legal Advisor & Advocate</option>
+                      <option>National Incharge</option>
+                      <option>National Deputy Security</option>
+                      <option>National Special Officer</option>
                     </optgroup>
                   </select>
                 </div>
@@ -4501,49 +5430,337 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                 </div>
               </div>
 
-              {/* Cover Photo Upload & URL */}
-              <div className="space-y-1.5 p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <label className="block font-bold text-slate-700 uppercase">
-                    Cover Image (Upload from Computer or Paste URL) *
-                  </label>
-                  {newActivity.image && (
-                    <span className="text-[10px] text-emerald-700 font-semibold flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[13px]">check_circle</span> Image loaded
-                    </span>
-                  )}
+              {/* Media Configuration: Image vs Video (Both Co-exist) */}
+              <div className="space-y-3 p-3.5 bg-slate-50 border-2 border-slate-200 rounded-xl">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-200">
+                  <div>
+                    <label className="block font-bold text-slate-800 uppercase text-xs">
+                      Article Media Format & Visual Asset
+                    </label>
+                    <p className="text-[11px] text-slate-500">
+                      Select primary display format for this section. Both image and video data are saved so you can switch anytime.
+                    </p>
+                  </div>
+                  
+                  {/* Co-existing Switcher Pills */}
+                  <div className="inline-flex bg-slate-200 p-1 rounded-lg self-start sm:self-auto">
+                    <button
+                      type="button"
+                      onClick={() => setNewActivity({ ...newActivity, mediaType: 'image' })}
+                      className={`px-3 py-1 rounded-md text-xs font-bold uppercase transition-all cursor-pointer flex items-center gap-1.5 ${
+                        (newActivity.mediaType || 'image') === 'image'
+                          ? 'bg-white text-[#0d47a1] shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-[15px]">image</span>
+                      <span>Image</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNewActivity({ ...newActivity, mediaType: 'video' })}
+                      className={`px-3 py-1 rounded-md text-xs font-bold uppercase transition-all cursor-pointer flex items-center gap-1.5 ${
+                        newActivity.mediaType === 'video'
+                          ? 'bg-[#0d47a1] text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-[15px]">videocam</span>
+                      <span>Video</span>
+                    </button>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <label className="px-3 py-2 bg-white border border-slate-300 hover:border-[#0d47a1] rounded text-slate-700 font-semibold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs">
-                    <span className="material-symbols-outlined text-[16px] text-[#0d47a1]">upload_file</span>
-                    <span>Upload Image File</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleActivityImageUpload(e, false)}
-                      className="hidden"
-                    />
-                  </label>
+                {/* OPTION 1: IMAGE CONTROLS */}
+                {(newActivity.mediaType || 'image') === 'image' && (
+                  <div className="space-y-2 animate-fadeIn">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-slate-700 uppercase flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[15px] text-[#0d47a1]">photo_library</span>
+                        <span>Cover Photo (Upload from PC or Paste Image URL)</span>
+                      </span>
+                      {newActivity.image && (
+                        <span className="text-[10px] text-emerald-700 font-semibold flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[13px]">check_circle</span> Image Active
+                        </span>
+                      )}
+                    </div>
 
-                  <span className="text-slate-400 font-bold text-xs">or</span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <label className="px-3 py-2 bg-white border border-slate-300 hover:border-[#0d47a1] rounded text-slate-700 font-semibold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs">
+                        <span className="material-symbols-outlined text-[16px] text-[#0d47a1]">upload_file</span>
+                        <span>Upload New Image</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleActivityImageUpload(e, false)}
+                          className="hidden"
+                        />
+                      </label>
 
-                  <input
-                    type="url"
-                    placeholder="https://... (Direct image URL)"
-                    value={newActivity.image}
-                    onChange={(e) => setNewActivity({ ...newActivity, image: e.target.value })}
-                    className="flex-1 bg-white border border-slate-300 rounded px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0d47a1]"
-                  />
-                </div>
+                      <span className="text-slate-400 font-bold text-xs">or</span>
 
-                {newActivity.image && (
-                  <div className="mt-2 relative w-full h-32 rounded-lg overflow-hidden border border-slate-200">
-                    <img
-                      src={newActivity.image}
-                      alt="Cover Preview"
-                      className="w-full h-full object-cover"
-                    />
+                      <input
+                        type="url"
+                        placeholder="https://... (Direct image URL)"
+                        value={newActivity.image || ''}
+                        onChange={(e) => setNewActivity({ ...newActivity, image: e.target.value })}
+                        className="flex-1 min-w-[200px] bg-white border border-slate-300 rounded px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0d47a1]"
+                      />
+                    </div>
+
+                    {newActivity.image && (
+                      <div className="mt-2 relative w-full h-36 rounded-lg overflow-hidden border border-slate-200 group bg-slate-900">
+                        <img
+                          src={newActivity.image}
+                          alt="Cover Preview"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute top-2 right-2 flex items-center gap-1">
+                          <span className="px-2 py-0.5 bg-black/70 text-white text-[10px] font-mono rounded">
+                            Active Card & Hero Photo
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* OPTION 2: VIDEO CONTROLS (Upload & YouTube) */}
+                {newActivity.mediaType === 'video' && (
+                  <div className="space-y-3 animate-fadeIn">
+                    {/* Sub-selector: YouTube vs Upload */}
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <span className="text-[11px] font-bold text-slate-700 uppercase flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[15px] text-red-600">smart_display</span>
+                        <span>Video Source Option:</span>
+                      </span>
+
+                      <div className="flex items-center gap-1 bg-white border border-slate-300 rounded-lg p-0.5">
+                        <button
+                          type="button"
+                          onClick={() => setNewActivity({ ...newActivity, videoType: 'youtube' })}
+                          className={`px-3 py-1 rounded text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                            (newActivity.videoType || 'youtube') === 'youtube'
+                              ? 'bg-red-600 text-white'
+                              : 'text-slate-600 hover:text-red-600'
+                          }`}
+                        >
+                          <span className="material-symbols-outlined text-[14px]">smart_display</span>
+                          <span>YouTube Video</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setNewActivity({ ...newActivity, videoType: 'upload' })}
+                          className={`px-3 py-1 rounded text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                            newActivity.videoType === 'upload'
+                              ? 'bg-[#0d47a1] text-white'
+                              : 'text-slate-600 hover:text-[#0d47a1]'
+                          }`}
+                        >
+                          <span className="material-symbols-outlined text-[14px]">file_upload</span>
+                          <span>Upload Video File</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* YouTube Video URL Input & Preview */}
+                    {(newActivity.videoType || 'youtube') === 'youtube' && (
+                      <div className="space-y-2 p-3 bg-white border border-red-200 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <label className="block font-bold text-slate-800 text-xs">
+                            YouTube Video URL or Video ID *
+                          </label>
+                          {newActivity.videoUrl && getYouTubeVideoId(newActivity.videoUrl) ? (
+                            <span className="text-[10px] text-emerald-700 font-bold flex items-center gap-1 font-mono">
+                              <span className="material-symbols-outlined text-[13px]">check_circle</span>
+                              ID: {getYouTubeVideoId(newActivity.videoUrl)}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              e.g. https://www.youtube.com/watch?v=...
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <div className="relative flex-1">
+                            <span className="absolute left-3 top-2.5 text-red-600 material-symbols-outlined text-[18px]">
+                              smart_display
+                            </span>
+                            <input
+                              type="text"
+                              placeholder="Paste YouTube watch link, youtu.be, shorts or embed URL..."
+                              value={newActivity.videoUrl || ''}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                const ytId = getYouTubeVideoId(val);
+                                setNewActivity({
+                                  ...newActivity,
+                                  videoUrl: val,
+                                  image: (!newActivity.image || newActivity.image.includes('youtube.com')) && ytId
+                                    ? getYouTubeThumbnailUrl(ytId) || newActivity.image
+                                    : newActivity.image
+                                });
+                              }}
+                              className="w-full bg-slate-50 border border-slate-300 rounded pl-9 pr-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-600 font-mono"
+                            />
+                          </div>
+
+                          {newActivity.videoUrl && getYouTubeVideoId(newActivity.videoUrl) && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const ytThumb = getYouTubeThumbnailUrl(newActivity.videoUrl);
+                                if (ytThumb) {
+                                  setNewActivity({ ...newActivity, image: ytThumb });
+                                  setFeedbackMsg({ type: 'success', text: 'YouTube thumbnail set as cover image!' });
+                                }
+                              }}
+                              className="px-2.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded text-[11px] font-bold whitespace-nowrap cursor-pointer flex items-center gap-1"
+                              title="Set YouTube thumbnail as cover photo"
+                            >
+                              <span className="material-symbols-outlined text-[14px] text-red-600">image</span>
+                              <span>Use YT Thumb</span>
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Interactive YouTube Live Embed Preview */}
+                        {newActivity.videoUrl && getYouTubeEmbedUrl(newActivity.videoUrl) ? (
+                          <div className="mt-2 space-y-1">
+                            <div className="flex items-center justify-between text-[11px] font-bold text-slate-600">
+                              <span>Live YouTube Preview</span>
+                              <span className="text-emerald-700 font-semibold flex items-center gap-0.5">
+                                <span className="material-symbols-outlined text-[12px]">play_circle</span> Ready to stream
+                              </span>
+                            </div>
+                            <div className="w-full aspect-video rounded-lg overflow-hidden bg-black border border-slate-300 shadow-sm">
+                              <iframe
+                                src={getYouTubeEmbedUrl(newActivity.videoUrl) || ''}
+                                title="YouTube Video Preview"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                                className="w-full h-full border-0"
+                              />
+                            </div>
+                          </div>
+                        ) : newActivity.videoUrl ? (
+                          <p className="text-[11px] text-amber-700 bg-amber-50 p-2 rounded border border-amber-200">
+                            Please provide a valid YouTube URL (e.g., https://www.youtube.com/watch?v=... or https://youtu.be/...).
+                          </p>
+                        ) : null}
+                      </div>
+                    )}
+
+                    {/* Upload Video File Input & Preview */}
+                    {newActivity.videoType === 'upload' && (
+                      <div className="space-y-2 p-3 bg-white border border-blue-200 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <label className="block font-bold text-slate-800 text-xs">
+                            Upload Video File (MP4, WebM, OGG, MOV up to 100MB) *
+                          </label>
+                          {newActivity.videoUrl && (
+                            <span className="text-[10px] text-emerald-700 font-bold flex items-center gap-1 font-mono">
+                              <span className="material-symbols-outlined text-[13px]">check_circle</span>
+                              Video Attached
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                          <label className="px-3 py-2 bg-[#0d47a1] hover:bg-blue-900 text-white rounded text-xs font-bold uppercase flex items-center gap-1.5 cursor-pointer shadow-xs">
+                            <span className="material-symbols-outlined text-[16px]">
+                              {videoUploadingAdd ? 'hourglass_top' : 'upload_file'}
+                            </span>
+                            <span>{videoUploadingAdd ? 'Uploading...' : 'Choose Video File'}</span>
+                            <input
+                              type="file"
+                              accept="video/mp4,video/webm,video/ogg,video/quicktime,video/*"
+                              disabled={videoUploadingAdd}
+                              onChange={(e) => handleActivityVideoUpload(e, false)}
+                              className="hidden"
+                            />
+                          </label>
+
+                          <span className="text-slate-400 font-bold text-xs">or</span>
+
+                          <input
+                            type="text"
+                            placeholder="Direct video file URL (/uploads/videos/... or https://...)"
+                            value={newActivity.videoUrl || ''}
+                            onChange={(e) => setNewActivity({ ...newActivity, videoUrl: e.target.value })}
+                            className="flex-1 min-w-[200px] bg-slate-50 border border-slate-300 rounded px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0d47a1] font-mono"
+                          />
+
+                          {newActivity.videoUrl && (
+                            <button
+                              type="button"
+                              onClick={() => setNewActivity({ ...newActivity, videoUrl: '' })}
+                              className="px-2 py-2 text-slate-400 hover:text-red-600 rounded cursor-pointer"
+                              title="Clear video"
+                            >
+                              <span className="material-symbols-outlined text-[16px]">delete</span>
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Live Uploaded Video Player Preview */}
+                        {newActivity.videoUrl && (
+                          <div className="mt-2 space-y-1">
+                            <div className="flex items-center justify-between text-[11px] font-bold text-slate-600">
+                              <span>Uploaded Video Player Preview</span>
+                              <span className="text-emerald-700 font-semibold flex items-center gap-0.5">
+                                <span className="material-symbols-outlined text-[12px]">check_circle</span> Loaded
+                              </span>
+                            </div>
+                            <div className="w-full max-h-56 bg-black rounded-lg overflow-hidden border border-slate-300 flex items-center justify-center">
+                              <video
+                                controls
+                                playsInline
+                                src={newActivity.videoUrl}
+                                poster={newActivity.image || undefined}
+                                className="w-full max-h-56 object-contain"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Co-existing Cover Thumbnail for Video */}
+                    <div className="pt-2 border-t border-slate-200">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block font-bold text-slate-700 text-[11px] uppercase flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[14px] text-slate-500">add_photo_alternate</span>
+                          <span>Video Cover Thumbnail (Optional Poster Image)</span>
+                        </label>
+                        {newActivity.image && (
+                          <span className="text-[10px] text-slate-500 font-mono">
+                            Thumbnail active
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <label className="px-2.5 py-1.5 bg-white border border-slate-300 hover:border-slate-400 rounded text-slate-700 text-xs font-semibold flex items-center gap-1 cursor-pointer">
+                          <span className="material-symbols-outlined text-[14px]">upload</span>
+                          <span>Upload Thumbnail</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleActivityImageUpload(e, false)}
+                            className="hidden"
+                          />
+                        </label>
+                        <input
+                          type="url"
+                          placeholder="Poster image URL..."
+                          value={newActivity.image || ''}
+                          onChange={(e) => setNewActivity({ ...newActivity, image: e.target.value })}
+                          className="flex-1 min-w-[180px] bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none"
+                        />
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -4753,48 +5970,337 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                 </div>
               </div>
 
-              {/* Cover Photo Upload & URL */}
-              <div className="space-y-1.5 p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <label className="block font-bold text-slate-700 uppercase">
-                    Cover Image (Upload from Computer or Paste URL) *
-                  </label>
-                  {editingActivity.image && (
-                    <span className="text-[10px] text-emerald-700 font-semibold flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[13px]">check_circle</span> Image loaded
-                    </span>
-                  )}
+              {/* Media Configuration: Image vs Video (Both Co-exist) */}
+              <div className="space-y-3 p-3.5 bg-slate-50 border-2 border-slate-200 rounded-xl">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-200">
+                  <div>
+                    <label className="block font-bold text-slate-800 uppercase text-xs">
+                      Article Media Format & Visual Asset
+                    </label>
+                    <p className="text-[11px] text-slate-500">
+                      Select primary display format for this section. Both image and video data are saved so you can switch anytime.
+                    </p>
+                  </div>
+                  
+                  {/* Co-existing Switcher Pills */}
+                  <div className="inline-flex bg-slate-200 p-1 rounded-lg self-start sm:self-auto">
+                    <button
+                      type="button"
+                      onClick={() => setEditingActivity({ ...editingActivity, mediaType: 'image' })}
+                      className={`px-3 py-1 rounded-md text-xs font-bold uppercase transition-all cursor-pointer flex items-center gap-1.5 ${
+                        (editingActivity.mediaType || 'image') === 'image'
+                          ? 'bg-white text-[#0d47a1] shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-[15px]">image</span>
+                      <span>Image</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingActivity({ ...editingActivity, mediaType: 'video' })}
+                      className={`px-3 py-1 rounded-md text-xs font-bold uppercase transition-all cursor-pointer flex items-center gap-1.5 ${
+                        editingActivity.mediaType === 'video'
+                          ? 'bg-[#0d47a1] text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-[15px]">videocam</span>
+                      <span>Video</span>
+                    </button>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <label className="px-3 py-2 bg-white border border-slate-300 hover:border-[#0d47a1] rounded text-slate-700 font-semibold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs">
-                    <span className="material-symbols-outlined text-[16px] text-[#0d47a1]">upload_file</span>
-                    <span>Upload New Image</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleActivityImageUpload(e, true)}
-                      className="hidden"
-                    />
-                  </label>
+                {/* OPTION 1: IMAGE CONTROLS */}
+                {(editingActivity.mediaType || 'image') === 'image' && (
+                  <div className="space-y-2 animate-fadeIn">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-slate-700 uppercase flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[15px] text-[#0d47a1]">photo_library</span>
+                        <span>Cover Photo (Upload from PC or Paste Image URL)</span>
+                      </span>
+                      {editingActivity.image && (
+                        <span className="text-[10px] text-emerald-700 font-semibold flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[13px]">check_circle</span> Image Active
+                        </span>
+                      )}
+                    </div>
 
-                  <span className="text-slate-400 font-bold text-xs">or</span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <label className="px-3 py-2 bg-white border border-slate-300 hover:border-[#0d47a1] rounded text-slate-700 font-semibold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs">
+                        <span className="material-symbols-outlined text-[16px] text-[#0d47a1]">upload_file</span>
+                        <span>Upload New Image</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleActivityImageUpload(e, true)}
+                          className="hidden"
+                        />
+                      </label>
 
-                  <input
-                    type="url"
-                    value={editingActivity.image}
-                    onChange={(e) => setEditingActivity({ ...editingActivity, image: e.target.value })}
-                    className="flex-1 bg-white border border-slate-300 rounded px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0d47a1]"
-                  />
-                </div>
+                      <span className="text-slate-400 font-bold text-xs">or</span>
 
-                {editingActivity.image && (
-                  <div className="mt-2 relative w-full h-32 rounded-lg overflow-hidden border border-slate-200">
-                    <img
-                      src={editingActivity.image}
-                      alt="Cover Preview"
-                      className="w-full h-full object-cover"
-                    />
+                      <input
+                        type="url"
+                        placeholder="https://... (Direct image URL)"
+                        value={editingActivity.image || ''}
+                        onChange={(e) => setEditingActivity({ ...editingActivity, image: e.target.value })}
+                        className="flex-1 min-w-[200px] bg-white border border-slate-300 rounded px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0d47a1]"
+                      />
+                    </div>
+
+                    {editingActivity.image && (
+                      <div className="mt-2 relative w-full h-36 rounded-lg overflow-hidden border border-slate-200 group bg-slate-900">
+                        <img
+                          src={editingActivity.image}
+                          alt="Cover Preview"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute top-2 right-2 flex items-center gap-1">
+                          <span className="px-2 py-0.5 bg-black/70 text-white text-[10px] font-mono rounded">
+                            Active Card & Hero Photo
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* OPTION 2: VIDEO CONTROLS (Upload & YouTube) */}
+                {editingActivity.mediaType === 'video' && (
+                  <div className="space-y-3 animate-fadeIn">
+                    {/* Sub-selector: YouTube vs Upload */}
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <span className="text-[11px] font-bold text-slate-700 uppercase flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[15px] text-red-600">smart_display</span>
+                        <span>Video Source Option:</span>
+                      </span>
+
+                      <div className="flex items-center gap-1 bg-white border border-slate-300 rounded-lg p-0.5">
+                        <button
+                          type="button"
+                          onClick={() => setEditingActivity({ ...editingActivity, videoType: 'youtube' })}
+                          className={`px-3 py-1 rounded text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                            (editingActivity.videoType || 'youtube') === 'youtube'
+                              ? 'bg-red-600 text-white'
+                              : 'text-slate-600 hover:text-red-600'
+                          }`}
+                        >
+                          <span className="material-symbols-outlined text-[14px]">smart_display</span>
+                          <span>YouTube Video</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingActivity({ ...editingActivity, videoType: 'upload' })}
+                          className={`px-3 py-1 rounded text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                            editingActivity.videoType === 'upload'
+                              ? 'bg-[#0d47a1] text-white'
+                              : 'text-slate-600 hover:text-[#0d47a1]'
+                          }`}
+                        >
+                          <span className="material-symbols-outlined text-[14px]">file_upload</span>
+                          <span>Upload Video File</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* YouTube Video URL Input & Preview */}
+                    {(editingActivity.videoType || 'youtube') === 'youtube' && (
+                      <div className="space-y-2 p-3 bg-white border border-red-200 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <label className="block font-bold text-slate-800 text-xs">
+                            YouTube Video URL or Video ID *
+                          </label>
+                          {editingActivity.videoUrl && getYouTubeVideoId(editingActivity.videoUrl) ? (
+                            <span className="text-[10px] text-emerald-700 font-bold flex items-center gap-1 font-mono">
+                              <span className="material-symbols-outlined text-[13px]">check_circle</span>
+                              ID: {getYouTubeVideoId(editingActivity.videoUrl)}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              e.g. https://www.youtube.com/watch?v=...
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <div className="relative flex-1">
+                            <span className="absolute left-3 top-2.5 text-red-600 material-symbols-outlined text-[18px]">
+                              smart_display
+                            </span>
+                            <input
+                              type="text"
+                              placeholder="Paste YouTube watch link, youtu.be, shorts or embed URL..."
+                              value={editingActivity.videoUrl || ''}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                const ytId = getYouTubeVideoId(val);
+                                setEditingActivity({
+                                  ...editingActivity,
+                                  videoUrl: val,
+                                  image: (!editingActivity.image || editingActivity.image.includes('youtube.com')) && ytId
+                                    ? getYouTubeThumbnailUrl(ytId) || editingActivity.image
+                                    : editingActivity.image
+                                });
+                              }}
+                              className="w-full bg-slate-50 border border-slate-300 rounded pl-9 pr-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-600 font-mono"
+                            />
+                          </div>
+
+                          {editingActivity.videoUrl && getYouTubeVideoId(editingActivity.videoUrl) && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const ytThumb = getYouTubeThumbnailUrl(editingActivity.videoUrl);
+                                if (ytThumb) {
+                                  setEditingActivity({ ...editingActivity, image: ytThumb });
+                                  setFeedbackMsg({ type: 'success', text: 'YouTube thumbnail set as cover image!' });
+                                }
+                              }}
+                              className="px-2.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded text-[11px] font-bold whitespace-nowrap cursor-pointer flex items-center gap-1"
+                              title="Set YouTube thumbnail as cover photo"
+                            >
+                              <span className="material-symbols-outlined text-[14px] text-red-600">image</span>
+                              <span>Use YT Thumb</span>
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Interactive YouTube Live Embed Preview */}
+                        {editingActivity.videoUrl && getYouTubeEmbedUrl(editingActivity.videoUrl) ? (
+                          <div className="mt-2 space-y-1">
+                            <div className="flex items-center justify-between text-[11px] font-bold text-slate-600">
+                              <span>Live YouTube Preview</span>
+                              <span className="text-emerald-700 font-semibold flex items-center gap-0.5">
+                                <span className="material-symbols-outlined text-[12px]">play_circle</span> Ready to stream
+                              </span>
+                            </div>
+                            <div className="w-full aspect-video rounded-lg overflow-hidden bg-black border border-slate-300 shadow-sm">
+                              <iframe
+                                src={getYouTubeEmbedUrl(editingActivity.videoUrl) || ''}
+                                title="YouTube Video Preview"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                                className="w-full h-full border-0"
+                              />
+                            </div>
+                          </div>
+                        ) : editingActivity.videoUrl ? (
+                          <p className="text-[11px] text-amber-700 bg-amber-50 p-2 rounded border border-amber-200">
+                            Please provide a valid YouTube URL (e.g., https://www.youtube.com/watch?v=... or https://youtu.be/...).
+                          </p>
+                        ) : null}
+                      </div>
+                    )}
+
+                    {/* Upload Video File Input & Preview */}
+                    {editingActivity.videoType === 'upload' && (
+                      <div className="space-y-2 p-3 bg-white border border-blue-200 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <label className="block font-bold text-slate-800 text-xs">
+                            Upload Video File (MP4, WebM, OGG, MOV up to 100MB) *
+                          </label>
+                          {editingActivity.videoUrl && (
+                            <span className="text-[10px] text-emerald-700 font-bold flex items-center gap-1 font-mono">
+                              <span className="material-symbols-outlined text-[13px]">check_circle</span>
+                              Video Attached
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                          <label className="px-3 py-2 bg-[#0d47a1] hover:bg-blue-900 text-white rounded text-xs font-bold uppercase flex items-center gap-1.5 cursor-pointer shadow-xs">
+                            <span className="material-symbols-outlined text-[16px]">
+                              {videoUploadingEdit ? 'hourglass_top' : 'upload_file'}
+                            </span>
+                            <span>{videoUploadingEdit ? 'Uploading...' : 'Choose Video File'}</span>
+                            <input
+                              type="file"
+                              accept="video/mp4,video/webm,video/ogg,video/quicktime,video/*"
+                              disabled={videoUploadingEdit}
+                              onChange={(e) => handleActivityVideoUpload(e, true)}
+                              className="hidden"
+                            />
+                          </label>
+
+                          <span className="text-slate-400 font-bold text-xs">or</span>
+
+                          <input
+                            type="text"
+                            placeholder="Direct video file URL (/uploads/videos/... or https://...)"
+                            value={editingActivity.videoUrl || ''}
+                            onChange={(e) => setEditingActivity({ ...editingActivity, videoUrl: e.target.value })}
+                            className="flex-1 min-w-[200px] bg-slate-50 border border-slate-300 rounded px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0d47a1] font-mono"
+                          />
+
+                          {editingActivity.videoUrl && (
+                            <button
+                              type="button"
+                              onClick={() => setEditingActivity({ ...editingActivity, videoUrl: '' })}
+                              className="px-2 py-2 text-slate-400 hover:text-red-600 rounded cursor-pointer"
+                              title="Clear video"
+                            >
+                              <span className="material-symbols-outlined text-[16px]">delete</span>
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Live Uploaded Video Player Preview */}
+                        {editingActivity.videoUrl && (
+                          <div className="mt-2 space-y-1">
+                            <div className="flex items-center justify-between text-[11px] font-bold text-slate-600">
+                              <span>Uploaded Video Player Preview</span>
+                              <span className="text-emerald-700 font-semibold flex items-center gap-0.5">
+                                <span className="material-symbols-outlined text-[12px]">check_circle</span> Loaded
+                              </span>
+                            </div>
+                            <div className="w-full max-h-56 bg-black rounded-lg overflow-hidden border border-slate-300 flex items-center justify-center">
+                              <video
+                                controls
+                                playsInline
+                                src={editingActivity.videoUrl}
+                                poster={editingActivity.image || undefined}
+                                className="w-full max-h-56 object-contain"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Co-existing Cover Thumbnail for Video */}
+                    <div className="pt-2 border-t border-slate-200">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block font-bold text-slate-700 text-[11px] uppercase flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[14px] text-slate-500">add_photo_alternate</span>
+                          <span>Video Cover Thumbnail (Optional Poster Image)</span>
+                        </label>
+                        {editingActivity.image && (
+                          <span className="text-[10px] text-slate-500 font-mono">
+                            Thumbnail active
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <label className="px-2.5 py-1.5 bg-white border border-slate-300 hover:border-slate-400 rounded text-slate-700 text-xs font-semibold flex items-center gap-1 cursor-pointer">
+                          <span className="material-symbols-outlined text-[14px]">upload</span>
+                          <span>Upload Thumbnail</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleActivityImageUpload(e, true)}
+                            className="hidden"
+                          />
+                        </label>
+                        <input
+                          type="url"
+                          placeholder="Poster image URL..."
+                          value={editingActivity.image || ''}
+                          onChange={(e) => setEditingActivity({ ...editingActivity, image: e.target.value })}
+                          className="flex-1 min-w-[180px] bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none"
+                        />
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -4870,19 +6376,51 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
               </button>
             </div>
 
-            {/* Cover Hero */}
-            <div className="w-full h-56 bg-slate-900 relative overflow-hidden">
-              <img
-                src={viewingActivity.image}
-                alt={viewingActivity.title}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-5">
-                <div className="text-white text-xs font-mono">
-                  {viewingActivity.author && <span>By {viewingActivity.author}</span>}
+            {/* Cover Hero: Video Player or Photo */}
+            {viewingActivity.mediaType === 'video' && viewingActivity.videoUrl ? (
+              (viewingActivity.videoType === 'youtube' || isYouTubeUrl(viewingActivity.videoUrl)) ? (
+                <div className="w-full aspect-video bg-black relative">
+                  <iframe
+                    src={getYouTubeEmbedUrl(viewingActivity.videoUrl) || ''}
+                    title={viewingActivity.title}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    className="w-full h-full border-0"
+                  />
+                  <span className="absolute top-3 left-3 px-2 py-0.5 bg-black/80 text-white text-[10px] font-mono rounded flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[13px] text-red-500">smart_display</span>
+                    <span>YouTube Dispatch</span>
+                  </span>
+                </div>
+              ) : (
+                <div className="w-full max-h-72 bg-black relative flex items-center justify-center">
+                  <video
+                    controls
+                    playsInline
+                    poster={viewingActivity.image || undefined}
+                    src={viewingActivity.videoUrl}
+                    className="w-full max-h-72 object-contain"
+                  />
+                  <span className="absolute top-3 left-3 px-2 py-0.5 bg-black/80 text-white text-[10px] font-mono rounded flex items-center gap-1 pointer-events-none">
+                    <span className="material-symbols-outlined text-[13px] text-blue-400">play_circle</span>
+                    <span>Uploaded Video</span>
+                  </span>
+                </div>
+              )
+            ) : (
+              <div className="w-full h-56 bg-slate-900 relative overflow-hidden">
+                <img
+                  src={viewingActivity.image}
+                  alt={viewingActivity.title}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-5">
+                  <div className="text-white text-xs font-mono">
+                    {viewingActivity.author && <span>By {viewingActivity.author}</span>}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Content Body */}
             <div className="p-6 space-y-4">
@@ -5052,6 +6590,496 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
           </div>
         </div>
       )}
+
+      {/* ======================================================== */}
+      {/* MODAL: ADD NEW CERTIFICATE (PDF / IMAGE UPLOADER)        */}
+      {/* ======================================================== */}
+      {showAddCertificateModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-3 sm:p-5 backdrop-blur-xs overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 relative animate-scaleUp my-auto max-h-[92vh] overflow-y-auto">
+            <button
+              onClick={() => setShowAddCertificateModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 p-1 rounded-full cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[20px]">close</span>
+            </button>
+
+            <div className="border-b border-slate-100 pb-3 flex items-center gap-2">
+              <div className="p-2 bg-blue-50 text-[#0d47a1] rounded-lg">
+                <span className="material-symbols-outlined text-2xl">upload_file</span>
+              </div>
+              <div>
+                <h3 className="font-headline font-bold text-lg text-slate-900 uppercase">
+                  Upload Statutory Certificate
+                </h3>
+                <span className="text-[10px] text-slate-500 font-mono">
+                  Attach official PDF or image document (MSME, NITI Aayog Darpan, Trust Charter, 12A/80G)
+                </span>
+              </div>
+            </div>
+
+            <form onSubmit={handleCreateCertificate} className="space-y-4 text-xs">
+              {/* Title */}
+              <div>
+                <label className="block font-bold text-slate-700 uppercase mb-1">
+                  Certificate Title <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. MSME UDYAM Registration Certificate"
+                  value={newCertificate.title || ''}
+                  onChange={(e) => setNewCertificate({ ...newCertificate, title: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-slate-900 font-semibold focus:outline-none focus:border-[#0d47a1]"
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block font-bold text-slate-700 uppercase mb-1">
+                  Description / Remarks <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  required
+                  rows={2}
+                  placeholder="Enter statutory description, registration scope, or institutional remarks..."
+                  value={newCertificate.description || ''}
+                  onChange={(e) => setNewCertificate({ ...newCertificate, description: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-slate-900 focus:outline-none focus:border-[#0d47a1]"
+                />
+              </div>
+
+              {/* Optional Registration No & Authority */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase mb-1">
+                    Registration / Unique ID
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. UP-50-0196301 or DL/2021/RAWF"
+                    value={newCertificate.registrationNumber || ''}
+                    onChange={(e) => setNewCertificate({ ...newCertificate, registrationNumber: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-slate-900 font-mono focus:outline-none focus:border-[#0d47a1]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase mb-1">
+                    Issuing Authority
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Ministry of MSME, Govt. of India"
+                    value={newCertificate.issuingAuthority || ''}
+                    onChange={(e) => setNewCertificate({ ...newCertificate, issuingAuthority: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-slate-900 focus:outline-none focus:border-[#0d47a1]"
+                  />
+                </div>
+              </div>
+
+              {/* Category, Date & Status */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase mb-1">Category</label>
+                  <select
+                    value={newCertificate.category || 'Government Accreditation'}
+                    onChange={(e) => setNewCertificate({ ...newCertificate, category: e.target.value as any })}
+                    className="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-2 text-slate-900 focus:outline-none"
+                  >
+                    <option value="Government Accreditation">Government Accreditation</option>
+                    <option value="Trust Charter">Trust Charter</option>
+                    <option value="Tax Exemption">Tax Exemption (12A/80G)</option>
+                    <option value="Statutory License">Statutory License</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase mb-1">Issue Date</label>
+                  <input
+                    type="text"
+                    placeholder="DD/MM/YYYY"
+                    value={newCertificate.issueDate || ''}
+                    onChange={(e) => setNewCertificate({ ...newCertificate, issueDate: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-slate-900 font-mono focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase mb-1">Status</label>
+                  <select
+                    value={newCertificate.status || 'Published'}
+                    onChange={(e) => setNewCertificate({ ...newCertificate, status: e.target.value as any })}
+                    className="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-2 text-slate-900 focus:outline-none"
+                  >
+                    <option value="Published">Published (Public)</option>
+                    <option value="Draft">Draft (Internal)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Document File Uploader (PDF or Image) */}
+              <div className="p-4 bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-slate-700 uppercase flex items-center gap-1.5 text-xs">
+                    <span className="material-symbols-outlined text-[#0d47a1] text-base">attachment</span>
+                    <span>Document File (PDF or Image) <span className="text-red-500">*</span></span>
+                  </label>
+                  <span className="text-[10px] text-slate-400 font-mono">Max 25MB · PDF, PNG, JPG</span>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center gap-3">
+                  <label className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-slate-300 rounded-lg text-slate-700 font-bold hover:bg-slate-100 cursor-pointer shadow-xs transition-colors">
+                    <span className="material-symbols-outlined text-[#0d47a1] text-lg">folder_open</span>
+                    <span>Choose PDF or Image File</span>
+                    <input
+                      type="file"
+                      accept=".pdf, application/pdf, image/png, image/jpeg, image/jpg, image/webp"
+                      onChange={(e) => handleCertificateFileUpload(e, false)}
+                      className="hidden"
+                    />
+                  </label>
+
+                  {certificateUploading && (
+                    <div className="flex items-center gap-2 text-xs font-mono text-[#0d47a1]">
+                      <div className="w-4 h-4 rounded-full border-2 border-[#0d47a1] border-t-transparent animate-spin"></div>
+                      <span>Processing and validating document...</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* File Attachment & Preview Card */}
+                {newCertificate.fileUrl && (
+                  <div className="mt-3 p-3 bg-white border border-slate-200 rounded-lg flex items-center justify-between gap-3 shadow-xs">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className={`w-9 h-9 rounded flex items-center justify-center shrink-0 ${
+                        newCertificate.fileType === 'pdf' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-[#0d47a1]'
+                      }`}>
+                        <span className="material-symbols-outlined text-xl">
+                          {newCertificate.fileType === 'pdf' ? 'picture_as_pdf' : 'image'}
+                        </span>
+                      </div>
+                      <div className="min-w-0">
+                        <span className="font-bold text-slate-900 text-xs block truncate">
+                          {newCertificate.fileName || 'Attached Document'}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          {newCertificate.fileSize || 'Validated'} · {newCertificate.fileType?.toUpperCase()}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <a
+                        href={newCertificate.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[11px] font-bold"
+                      >
+                        Preview
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => setNewCertificate({ ...newCertificate, fileUrl: '', fileName: '', fileSize: '' })}
+                        className="p-1 text-slate-400 hover:text-red-600 rounded"
+                        title="Remove file"
+                      >
+                        <span className="material-symbols-outlined text-base">close</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Form Actions */}
+              <div className="pt-3 border-t border-slate-200 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddCertificateModal(false)}
+                  className="px-4 py-2 border border-slate-300 hover:bg-slate-100 text-slate-700 rounded font-bold uppercase transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={certificateUploading}
+                  className="px-5 py-2 bg-[#0d47a1] hover:bg-blue-900 disabled:opacity-50 text-white rounded font-bold uppercase flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[16px]">publish</span>
+                  <span>Upload &amp; Publish Certificate</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL: EDIT CERTIFICATE                                  */}
+      {/* ======================================================== */}
+      {editingCertificate && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-3 sm:p-5 backdrop-blur-xs overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 relative animate-scaleUp my-auto max-h-[92vh] overflow-y-auto">
+            <button
+              onClick={() => setEditingCertificate(null)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 p-1 rounded-full cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[20px]">close</span>
+            </button>
+
+            <div className="border-b border-slate-100 pb-3 flex items-center gap-2">
+              <div className="p-2 bg-amber-50 text-amber-800 rounded-lg">
+                <span className="material-symbols-outlined text-2xl">edit_document</span>
+              </div>
+              <div>
+                <h3 className="font-headline font-bold text-lg text-slate-900 uppercase">
+                  Edit Statutory Certificate
+                </h3>
+                <span className="text-[10px] text-slate-500 font-mono">
+                  Modify title, description, issuing details or replace the document file
+                </span>
+              </div>
+            </div>
+
+            <form onSubmit={handleUpdateCertificate} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 uppercase mb-1">
+                  Certificate Title <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editingCertificate.title || ''}
+                  onChange={(e) => setEditingCertificate({ ...editingCertificate, title: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-slate-900 font-semibold focus:outline-none focus:border-[#0d47a1]"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 uppercase mb-1">
+                  Description / Remarks <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  required
+                  rows={2}
+                  value={editingCertificate.description || ''}
+                  onChange={(e) => setEditingCertificate({ ...editingCertificate, description: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-slate-900 focus:outline-none focus:border-[#0d47a1]"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase mb-1">
+                    Registration / Unique ID
+                  </label>
+                  <input
+                    type="text"
+                    value={editingCertificate.registrationNumber || ''}
+                    onChange={(e) => setEditingCertificate({ ...editingCertificate, registrationNumber: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-slate-900 font-mono focus:outline-none focus:border-[#0d47a1]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase mb-1">
+                    Issuing Authority
+                  </label>
+                  <input
+                    type="text"
+                    value={editingCertificate.issuingAuthority || ''}
+                    onChange={(e) => setEditingCertificate({ ...editingCertificate, issuingAuthority: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-slate-900 focus:outline-none focus:border-[#0d47a1]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase mb-1">Category</label>
+                  <select
+                    value={editingCertificate.category || 'Government Accreditation'}
+                    onChange={(e) => setEditingCertificate({ ...editingCertificate, category: e.target.value as any })}
+                    className="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-2 text-slate-900 focus:outline-none"
+                  >
+                    <option value="Government Accreditation">Government Accreditation</option>
+                    <option value="Trust Charter">Trust Charter</option>
+                    <option value="Tax Exemption">Tax Exemption</option>
+                    <option value="Statutory License">Statutory License</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase mb-1">Issue Date</label>
+                  <input
+                    type="text"
+                    value={editingCertificate.issueDate || ''}
+                    onChange={(e) => setEditingCertificate({ ...editingCertificate, issueDate: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-slate-900 font-mono focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase mb-1">Status</label>
+                  <select
+                    value={editingCertificate.status || 'Published'}
+                    onChange={(e) => setEditingCertificate({ ...editingCertificate, status: e.target.value as any })}
+                    className="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-2 text-slate-900 focus:outline-none"
+                  >
+                    <option value="Published">Published</option>
+                    <option value="Draft">Draft</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Replace Document File */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-slate-700 uppercase text-xs">
+                    Current Document File
+                  </label>
+                  <label className="inline-flex items-center gap-1 text-[11px] font-bold text-[#0d47a1] hover:underline cursor-pointer">
+                    <span className="material-symbols-outlined text-[15px]">file_upload</span>
+                    <span>Replace Document</span>
+                    <input
+                      type="file"
+                      accept=".pdf, application/pdf, image/png, image/jpeg, image/jpg, image/webp"
+                      onChange={(e) => handleCertificateFileUpload(e, true)}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+
+                {editingCertificate.fileUrl && (
+                  <div className="p-3 bg-white border border-slate-200 rounded-lg flex items-center justify-between gap-3 shadow-xs">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className={`w-9 h-9 rounded flex items-center justify-center shrink-0 ${
+                        editingCertificate.fileType === 'pdf' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-[#0d47a1]'
+                      }`}>
+                        <span className="material-symbols-outlined text-xl">
+                          {editingCertificate.fileType === 'pdf' ? 'picture_as_pdf' : 'image'}
+                        </span>
+                      </div>
+                      <div className="min-w-0">
+                        <span className="font-bold text-slate-900 text-xs block truncate">
+                          {editingCertificate.fileName || 'Attached Document'}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          {editingCertificate.fileSize || 'Existing Document'} · {editingCertificate.fileType?.toUpperCase()}
+                        </span>
+                      </div>
+                    </div>
+
+                    <a
+                      href={editingCertificate.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs font-bold shrink-0"
+                    >
+                      View
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-3 border-t border-slate-200 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingCertificate(null)}
+                  className="px-4 py-2 border border-slate-300 hover:bg-slate-100 text-slate-700 rounded font-bold uppercase transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={certificateUploading}
+                  className="px-5 py-2 bg-[#0d47a1] hover:bg-blue-900 text-white rounded font-bold uppercase shadow-sm transition-colors cursor-pointer"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL: VIEW CERTIFICATE LIGHTBOX (ADMIN PREVIEW)         */}
+      {/* ======================================================== */}
+      {viewingCertificate && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full border border-slate-300 overflow-hidden flex flex-col max-h-[92vh] animate-scaleUp">
+            <div className="bg-slate-900 text-white px-5 py-3.5 flex items-center justify-between border-b border-slate-800 shrink-0">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="material-symbols-outlined text-amber-400 text-2xl">
+                  {viewingCertificate.fileType === 'pdf' ? 'picture_as_pdf' : 'image'}
+                </span>
+                <div className="min-w-0">
+                  <h3 className="font-headline font-black text-white text-base truncate">
+                    {viewingCertificate.title}
+                  </h3>
+                  <span className="text-[10px] text-amber-300 font-mono">
+                    {viewingCertificate.registrationNumber || 'Statutory Document'} · {viewingCertificate.fileName}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setViewingCertificate(null)}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-lg">close</span>
+              </button>
+            </div>
+
+            <div className="flex-1 bg-slate-100 p-4 overflow-auto flex items-center justify-center min-h-[400px] max-h-[65vh]">
+              {viewingCertificate.fileType === 'pdf' || (viewingCertificate.fileUrl && viewingCertificate.fileUrl.toLowerCase().endsWith('.pdf')) ? (
+                <iframe
+                  src={`${viewingCertificate.fileUrl}#toolbar=1`}
+                  title={viewingCertificate.title}
+                  className="w-full h-full min-h-[480px] border border-slate-300 rounded-lg shadow-inner bg-white"
+                />
+              ) : (
+                <img
+                  src={viewingCertificate.fileUrl}
+                  alt={viewingCertificate.title}
+                  className="max-h-[60vh] max-w-full object-contain rounded-lg shadow-md"
+                />
+              )}
+            </div>
+
+            <div className="bg-slate-50 px-5 py-3 border-t border-slate-200 flex items-center justify-between text-xs shrink-0">
+              <span className="text-slate-600 truncate max-w-md">
+                {viewingCertificate.description}
+              </span>
+              <div className="flex items-center gap-2 shrink-0">
+                <a
+                  href={viewingCertificate.fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 border border-slate-300 rounded font-bold text-slate-700 hover:bg-slate-100 uppercase"
+                >
+                  Full Tab
+                </a>
+                <a
+                  href={viewingCertificate.fileUrl}
+                  download={viewingCertificate.fileName || 'certificate.pdf'}
+                  className="px-3 py-1.5 bg-[#0d47a1] text-white rounded font-bold hover:bg-blue-900 uppercase flex items-center gap-1"
+                >
+                  <span className="material-symbols-outlined text-[15px]">download</span>
+                  <span>Download</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Project Commercial Quotation & Word (.docx) Modal */}
+      <QuotationModal
+        isOpen={showQuotationModal}
+        onClose={() => setShowQuotationModal(false)}
+      />
     </div>
   );
 };

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { toStandardDisplayDate } from '../utils/dateUtils';
 import { activitiesApi } from '../services';
+import { getYouTubeEmbedUrl, getYouTubeThumbnailUrl, isYouTubeUrl } from '../utils/videoUtils';
 
 interface ActivitiesPageProps {
   onNavigate: (page: string, subParam?: string) => void;
@@ -15,11 +16,29 @@ export interface ActivityItem {
   description: string;
   content?: string;
   image: string;
+  mediaType?: 'image' | 'video';
+  videoType?: 'upload' | 'youtube';
+  videoUrl?: string;
   author?: string;
   status?: string;
 }
 
 const DEFAULT_ACTIVITIES: ActivityItem[] = [
+  {
+    id: 'act-field-taskforce-briefing-2026',
+    title: 'Special Field Taskforce Briefing & Operational Dispatch',
+    category: 'Field Taskforce',
+    date: '12/10/2026',
+    location: 'National Command HQ & Northern Sector',
+    description: 'Official video briefing dispatch on encrypted intelligence coordination, field vigilance protocols, and emergency whistleblower assistance under the IFA 760 Charter.',
+    content: `The National Action Command of Raid Action Wing Foundation (RAWF) has released an official operational briefing video for registered Field Taskforce officers, regional vigilance coordinators, and civilian volunteers.\n\nKey Directives & Protocols Covered in the Video Broadcast:\n1. Verification Procedures under Section 204 BNS: Mandatory digital QR validation of credentials before initiating any preliminary inquiries.\n2. Encrypted Whistleblower Support: Routing sensitive institutional corruption dossiers directly through the zero-knowledge grievance portal.\n3. Inter-Agency Coordination: Ensuring formal escalation to statutory enforcement authorities including the State Anti-Corruption Bureau and Lokayukta.\n\nOfficers are instructed to review the full video dispatch above and verify operational readiness with their respective Zonal Directors.`,
+    image: '/uploads/videos/rawf-field-briefing-poster.jpg',
+    mediaType: 'video',
+    videoType: 'upload',
+    videoUrl: '/uploads/videos/rawf-field-briefing-test-video.mp4',
+    author: 'National Action Command HQ',
+    status: 'Published'
+  },
   {
     id: 'act-youth-anti-narcotics-2026',
     title: 'Citizen Anti-Narcotics Awareness Rally & Ground Mobilization',
@@ -29,6 +48,7 @@ const DEFAULT_ACTIVITIES: ActivityItem[] = [
     description: 'Over 2,500 college students, field vigilance volunteers, and local advocates joined RAWF field commanders to rally against synthetic narcotics distribution and demand strict enforcement.',
     content: `The National Youth Directorate of Raid Action Wing Foundation (RAWF) successfully executed a massive anti-narcotics mobilization campaign across educational institutions and urban transit corridors in Gujarat.\n\nCoordinated across Ahmedabad and Surat districts, the taskforce established direct citizen reporting kiosks, educated student leaders on Section 204 BNS protections, and collected actionable intelligence on illicit distribution nexus operating near collegiate campuses.\n\nKey Highlights & Action Items:\n1. Distributed over 5,000 bilingual citizen rights handbooks detailing reporting channels to NCB and State Police.\n2. Conducted forensic awareness workshops showing how clandestine synthetic drugs are masked as pharmaceutical supplements.\n3. Activated 12 institutional whistleblower cells led by trained volunteer paralegals.\n\nRAWF Field Directorate reiterated its unyielding commitment under IFA 760 Charter to protect Indian youth from organized narcotics cartels without compromising citizen privacy.`,
     image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuA7D1Cv8Zz5hHkHWRsC2dBpAnYUkZ0ZCtxYoBPJYBBLwhi71gukNqmUaq1S7ds7-rpnQy9dgKR1hFGJCvg6fdzR0QNDcs1uncde15aH1Cj_ovJ49wdbEnyi3HcgYt1DebTQ0dmp7nUxPXX0IuIC0B3gzWoAkWgk8l0YIc9eLsbfB7lOIuzdvNL7lz5_EFlnw_PjTKNYWFcNsU5OnVumga3256O6DHiOZwcVeUFcPhTvMLAcYBENLi3UaA',
+    mediaType: 'image',
     author: 'Youth Wing National Directorate'
   },
   {
@@ -198,14 +218,64 @@ export const ActivitiesPage: React.FC<ActivitiesPageProps> = ({ onNavigate }) =>
               key={act.id}
               className="bg-white border-2 border-slate-200 hover:border-red-600 rounded-xl overflow-hidden shadow-xs hover:shadow-md transition-all grid grid-cols-1 md:grid-cols-12 gap-6 items-center group"
             >
-              {/* Cover Image */}
-              <div className="md:col-span-5 h-60 md:h-full bg-slate-900 overflow-hidden relative">
-                <img
-                  src={act.image}
-                  alt={act.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-                <span className="absolute top-3 left-3 px-2.5 py-1 bg-black/70 backdrop-blur-xs text-white text-[10px] font-mono font-bold rounded uppercase">
+              {/* Cover Image or Video Preview */}
+              <div
+                onClick={() => setActiveArticle(act)}
+                className="md:col-span-5 h-60 md:h-full bg-slate-900 overflow-hidden relative cursor-pointer"
+              >
+                {act.mediaType === 'video' && act.videoUrl ? (
+                  (act.videoType === 'youtube' || isYouTubeUrl(act.videoUrl)) ? (
+                    <div className="w-full h-full relative group/vid">
+                      <img
+                        src={act.image || getYouTubeThumbnailUrl(act.videoUrl) || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&q=80&w=600'}
+                        alt={act.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <div className="absolute inset-0 bg-black/35 flex items-center justify-center transition-all group-hover:bg-black/20">
+                        <div className="w-12 h-12 rounded-full bg-red-600 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                          <span className="material-symbols-outlined text-[28px] ml-0.5">play_arrow</span>
+                        </div>
+                      </div>
+                      <span className="absolute bottom-3 right-3 px-2 py-0.5 bg-black/80 backdrop-blur-xs text-white text-[10px] font-mono font-bold rounded flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[13px] text-red-500">smart_display</span>
+                        <span>YouTube Video</span>
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="w-full h-full relative group/vid">
+                      {act.image ? (
+                        <img
+                          src={act.image}
+                          alt={act.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <video
+                          src={act.videoUrl}
+                          className="w-full h-full object-cover"
+                          muted
+                          playsInline
+                        />
+                      )}
+                      <div className="absolute inset-0 bg-black/35 flex items-center justify-center transition-all group-hover:bg-black/20">
+                        <div className="w-12 h-12 rounded-full bg-[#0d47a1] text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                          <span className="material-symbols-outlined text-[28px] ml-0.5">play_arrow</span>
+                        </div>
+                      </div>
+                      <span className="absolute bottom-3 right-3 px-2 py-0.5 bg-black/80 backdrop-blur-xs text-white text-[10px] font-mono font-bold rounded flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[13px] text-blue-400">play_circle</span>
+                        <span>Video Dispatch</span>
+                      </span>
+                    </div>
+                  )
+                ) : (
+                  <img
+                    src={act.image}
+                    alt={act.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                )}
+                <span className="absolute top-3 left-3 px-2.5 py-1 bg-black/70 backdrop-blur-xs text-white text-[10px] font-mono font-bold rounded uppercase pointer-events-none">
                   {toStandardDisplayDate(act.date)}
                 </span>
               </div>
@@ -335,28 +405,69 @@ export const ActivitiesPage: React.FC<ActivitiesPageProps> = ({ onNavigate }) =>
               </button>
             </div>
 
-            {/* Hero Image */}
-            <div className="w-full h-64 sm:h-80 bg-slate-900 relative overflow-hidden">
-              <img
-                src={activeArticle.image}
-                alt={activeArticle.title}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-6">
-                <div className="text-white space-y-1">
-                  <div className="flex items-center gap-2 text-xs font-mono text-amber-300">
-                    <span className="material-symbols-outlined text-[14px]">location_on</span>
-                    <span>{activeArticle.location}</span>
-                    {activeArticle.author && (
-                      <>
-                        <span>•</span>
-                        <span>Dispatch by {activeArticle.author}</span>
-                      </>
-                    )}
+            {/* Hero Media: YouTube Video Player or Uploaded Video or Hero Photo */}
+            {activeArticle.mediaType === 'video' && activeArticle.videoUrl ? (
+              (activeArticle.videoType === 'youtube' || isYouTubeUrl(activeArticle.videoUrl)) ? (
+                <div className="w-full aspect-video bg-black relative">
+                  <iframe
+                    src={getYouTubeEmbedUrl(activeArticle.videoUrl) || ''}
+                    title={activeArticle.title}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    className="w-full h-full border-0"
+                  />
+                </div>
+              ) : (
+                <div className="w-full max-h-[460px] bg-black relative flex items-center justify-center">
+                  <video
+                    controls
+                    playsInline
+                    poster={activeArticle.image || undefined}
+                    src={activeArticle.videoUrl}
+                    className="w-full max-h-[460px] object-contain"
+                  />
+                </div>
+              )
+            ) : (
+              <div className="w-full h-64 sm:h-80 bg-slate-900 relative overflow-hidden">
+                <img
+                  src={activeArticle.image}
+                  alt={activeArticle.title}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-6">
+                  <div className="text-white space-y-1">
+                    <div className="flex items-center gap-2 text-xs font-mono text-amber-300">
+                      <span className="material-symbols-outlined text-[14px]">location_on</span>
+                      <span>{activeArticle.location}</span>
+                      {activeArticle.author && (
+                        <>
+                          <span>•</span>
+                          <span>Dispatch by {activeArticle.author}</span>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
+
+            {/* If video is shown, display the location/author bar right beneath the video player */}
+            {activeArticle.mediaType === 'video' && activeArticle.videoUrl && (
+              <div className="px-6 py-2.5 bg-slate-900 text-white flex items-center gap-2 text-xs font-mono text-amber-300">
+                <span className="material-symbols-outlined text-[14px]">location_on</span>
+                <span>{activeArticle.location}</span>
+                {activeArticle.author && (
+                  <>
+                    <span className="text-slate-400">•</span>
+                    <span className="text-slate-300">Dispatch by {activeArticle.author}</span>
+                  </>
+                )}
+                <span className="ml-auto px-2 py-0.5 bg-black/50 text-slate-200 text-[10px] rounded uppercase font-bold">
+                  {activeArticle.videoType === 'youtube' ? 'YouTube Broadcast' : 'Video Footage'}
+                </span>
+              </div>
+            )}
 
             {/* Article Body */}
             <div className="p-6 sm:p-8 space-y-6">

@@ -23,6 +23,7 @@ import { DonateSection } from './components/DonateSection';
 import { StatutoryDisclaimer } from './components/StatutoryDisclaimer';
 import { Footer } from './components/Footer';
 import { OfficerVerificationModal } from './components/OfficerVerificationModal';
+import { QuotationModal } from './components/QuotationModal';
 
 // Dedicated Subpages
 import { AboutPage } from './pages/AboutPage';
@@ -34,6 +35,7 @@ import { BlacklistedOfficersPage } from './pages/BlacklistedOfficersPage';
 import { IndianLawsPage } from './pages/IndianLawsPage';
 import { GrievanceCellPage } from './pages/GrievanceCellPage';
 import { ActivitiesPage } from './pages/ActivitiesPage';
+import { CertificatesPage } from './pages/CertificatesPage';
 import { ContactPage } from './pages/ContactPage';
 import { ApplyOnlinePage } from './pages/ApplyOnlinePage';
 import { AdminPage } from './pages/AdminPage';
@@ -48,6 +50,7 @@ export default function App() {
   const [verifyModalOpen, setVerifyModalOpen] = useState(false);
   const [verifyPrefillCode, setVerifyPrefillCode] = useState<string | undefined>(undefined);
   const [prefillWing, setPrefillWing] = useState<string | undefined>(undefined);
+  const [quotationModalOpen, setQuotationModalOpen] = useState(false);
 
   // Initialize official Google Translate subsystem and protect icons/logos
   useEffect(() => {
@@ -72,11 +75,13 @@ export default function App() {
       else if (hash === 'blacklisted-officers') setCurrentPage('blacklisted-officers');
       else if (hash === 'indian-laws-page') setCurrentPage('indian-laws');
       else if (hash === 'grievance-cell-page') setCurrentPage('grievance-cell');
-      else if (hash === 'activities-page') setCurrentPage('activities');
+      else if (hash === 'activities-page' || hash === 'activities') setCurrentPage('activities');
+      else if (hash === 'certificates-page' || hash === 'certificates') setCurrentPage('certificates');
       else if (hash === 'apply-online-page') setCurrentPage('apply-online');
       else if (hash === 'contact-page') setCurrentPage('contact');
       else if (hash === 'privacy' || hash === 'privacy-policy' || hash === 'privacy-policy-page') setCurrentPage('privacy');
       else if (hash === 'admin' || hash === 'admin-portal') setCurrentPage('admin');
+      else if (hash === 'quotation' || hash === 'quotation-doc' || hash === 'proposal') setQuotationModalOpen(true);
     };
 
     window.addEventListener('hashchange', handleHash);
@@ -85,6 +90,10 @@ export default function App() {
   }, []);
 
   const handleNavigate = (page: string, subParam?: string) => {
+    if (page === 'quotation') {
+      setQuotationModalOpen(true);
+      return;
+    }
     setCurrentPage(page);
     setCurrentSubParam(subParam);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -131,6 +140,7 @@ export default function App() {
             <HeroCommandCenter
               onOpenVerifyModal={handleOpenVerifyModal}
               lang={lang}
+              onNavigate={handleNavigate}
             />
 
             {/* Interactive Civic Action & Gateways Hub */}
@@ -225,6 +235,10 @@ export default function App() {
           <ActivitiesPage onNavigate={handleNavigate} />
         )}
 
+        {currentPage === 'certificates' && (
+          <CertificatesPage onNavigate={handleNavigate} />
+        )}
+
         {currentPage === 'grievance-cell' && (
           <GrievanceCellPage onNavigate={handleNavigate} />
         )}
@@ -272,6 +286,12 @@ export default function App() {
         isOpen={verifyModalOpen}
         onClose={handleCloseVerifyModal}
         prefillCode={verifyPrefillCode}
+      />
+
+      {/* Global Project Commercial Quotation & Word (.docx) Modal */}
+      <QuotationModal
+        isOpen={quotationModalOpen}
+        onClose={() => setQuotationModalOpen(false)}
       />
 
       {/* Floating Language Switcher (Right Middle) */}

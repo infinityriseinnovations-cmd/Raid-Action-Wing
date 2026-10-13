@@ -83,6 +83,14 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               <button onClick={() => handleNav('id-download')} aria-label="ID Card Download Portal" className="hover:text-white transition-colors text-left cursor-pointer">
                 ID Card Download Portal
               </button>
+              <button
+                onClick={() => handleNav('quotation')}
+                aria-label="Project Commercial Quotation & Specifications in Word (.docx)"
+                className="text-amber-400 hover:text-amber-300 font-semibold transition-colors text-left cursor-pointer flex items-center gap-1.5 pt-0.5"
+              >
+                <span className="material-symbols-outlined text-[15px] text-amber-400">description</span>
+                <span>Project Quotation (.docx)</span>
+              </button>
             </div>
           </div>
 

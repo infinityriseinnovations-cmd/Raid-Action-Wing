@@ -104,10 +104,92 @@ export interface ActivityRecord {
   description: string;
   content: string;
   image: string;
+  mediaType?: 'image' | 'video';
+  videoType?: 'upload' | 'youtube';
+  videoUrl?: string;
   author?: string;
   status: 'Published' | 'Draft';
   createdAt?: string;
 }
+
+export interface CertificateRecord {
+  id: string;
+  title: string;
+  description: string;
+  fileUrl: string;
+  fileType: 'pdf' | 'image';
+  fileName: string;
+  fileSize?: string;
+  registrationNumber?: string;
+  issuingAuthority?: string;
+  issueDate?: string;
+  category?: 'Government Accreditation' | 'Trust Charter' | 'Tax Exemption' | 'Statutory License';
+  status: 'Published' | 'Draft';
+  createdAt?: string;
+}
+
+const certificatesDatabase: CertificateRecord[] = [
+  {
+    id: 'cert-msme-udyam',
+    title: 'MSME UDYAM Registration Certificate',
+    description: 'Statutory MSME Enterprise accreditation validating Raid Action Wing Foundation under enterprise registration framework by Ministry of Micro, Small and Medium Enterprises, Government of India.',
+    fileUrl: '/uploads/certificates/rawf-msme-udyam-certificate.pdf',
+    fileType: 'pdf',
+    fileName: 'rawf-msme-udyam-certificate.pdf',
+    fileSize: '8.6 KB',
+    registrationNumber: 'UP-50-0196301',
+    issuingAuthority: 'Ministry of MSME, Govt. of India',
+    issueDate: '20/03/2023',
+    category: 'Government Accreditation',
+    status: 'Published',
+    createdAt: '2023-03-20T10:00:00.000Z'
+  },
+  {
+    id: 'cert-niti-aayog-darpan',
+    title: 'NITI Aayog NGO Darpan Registration',
+    description: 'Official NGO Darpan unique identification granting recognition for voluntary vigilance oversight, institutional audits, and civic human rights initiatives across India.',
+    fileUrl: '/uploads/certificates/rawf-niti-aayog-darpan.pdf',
+    fileType: 'pdf',
+    fileName: 'rawf-niti-aayog-darpan.pdf',
+    fileSize: '8.5 KB',
+    registrationNumber: 'DL/2021/RAWF',
+    issuingAuthority: 'NITI Aayog, Government of India',
+    issueDate: '11/08/2021',
+    category: 'Government Accreditation',
+    status: 'Published',
+    createdAt: '2021-08-11T11:30:00.000Z'
+  },
+  {
+    id: 'cert-ifa-760-charter',
+    title: 'Indian Trusts Act 1882 Statutory Charter (IFA 760)',
+    description: 'Fundamental founding trust deed and national vigilance charter empowering RAWF investigative oversight, citizen whistleblower intake, and pro bono legal advocacy nationwide.',
+    fileUrl: '/uploads/certificates/rawf-ifa-760-trust-charter.pdf',
+    fileType: 'pdf',
+    fileName: 'rawf-ifa-760-trust-charter.pdf',
+    fileSize: '8.6 KB',
+    registrationNumber: 'IFA No. 760 / Reg. No. 448/2023',
+    issuingAuthority: 'Sub-Registrar Statutory Registry, Govt. of NCT of Delhi',
+    issueDate: '12/01/2023',
+    category: 'Trust Charter',
+    status: 'Published',
+    createdAt: '2023-01-12T09:00:00.000Z'
+  },
+  {
+    id: 'cert-12a-80g-tax-exemption',
+    title: 'Income Tax Exemption Order (Section 12A & 80G)',
+    description: 'Recognized non-profit taxation exemption enabling 50% tax deduction for philanthropic citizen contributions under Section 80G of the Income Tax Act, 1961.',
+    fileUrl: '/uploads/certificates/rawf-12a-80g-tax-exemption.pdf',
+    fileType: 'pdf',
+    fileName: 'rawf-12a-80g-tax-exemption.pdf',
+    fileSize: '8.1 KB',
+    registrationNumber: 'AAATR8892EF20231',
+    issuingAuthority: 'Income Tax Department, Ministry of Finance, Govt. of India',
+    issueDate: '18/04/2023',
+    category: 'Tax Exemption',
+    status: 'Published',
+    createdAt: '2023-04-18T14:00:00.000Z'
+  }
+];
 
 // In-Memory Database (Synchronized with official directory records)
 const officersDatabase: Officer[] = [
@@ -295,6 +377,22 @@ const eventsDatabase: EventRecord[] = [
 
 const activitiesDatabase: ActivityRecord[] = [
   {
+    id: 'act-field-taskforce-briefing-2026',
+    title: 'Special Field Taskforce Briefing & Operational Dispatch',
+    category: 'Field Taskforce',
+    date: '12/10/2026',
+    location: 'National Command HQ & Northern Sector',
+    description: 'Official video briefing dispatch on encrypted intelligence coordination, field vigilance protocols, and emergency whistleblower assistance under the IFA 760 Charter.',
+    content: `The National Action Command of Raid Action Wing Foundation (RAWF) has released an official operational briefing video for registered Field Taskforce officers, regional vigilance coordinators, and civilian volunteers.\n\nKey Directives & Protocols Covered in the Video Broadcast:\n1. Verification Procedures under Section 204 BNS: Mandatory digital QR validation of credentials before initiating any preliminary inquiries.\n2. Encrypted Whistleblower Support: Routing sensitive institutional corruption dossiers directly through the zero-knowledge grievance portal.\n3. Inter-Agency Coordination: Ensuring formal escalation to statutory enforcement authorities including the State Anti-Corruption Bureau and Lokayukta.\n\nOfficers are instructed to review the full video dispatch above and verify operational readiness with their respective Zonal Directors.`,
+    image: '/uploads/videos/rawf-field-briefing-poster.jpg',
+    mediaType: 'video',
+    videoType: 'upload',
+    videoUrl: '/uploads/videos/rawf-field-briefing-test-video.mp4',
+    author: 'National Action Command HQ',
+    status: 'Published',
+    createdAt: '2026-10-12T02:00:00.000Z'
+  },
+  {
     id: 'act-youth-anti-narcotics-2026',
     title: 'Citizen Anti-Narcotics Awareness Rally & Ground Mobilization',
     category: 'Youth Wing',
@@ -303,6 +401,7 @@ const activitiesDatabase: ActivityRecord[] = [
     description: 'Over 2,500 college students, field vigilance volunteers, and local advocates joined RAWF field commanders to rally against synthetic narcotics distribution and demand strict enforcement.',
     content: `The National Youth Directorate of Raid Action Wing Foundation (RAWF) successfully executed a massive anti-narcotics mobilization campaign across educational institutions and urban transit corridors in Gujarat.\n\nCoordinated across Ahmedabad and Surat districts, the taskforce established direct citizen reporting kiosks, educated student leaders on Section 204 BNS protections, and collected actionable intelligence on illicit distribution nexus operating near collegiate campuses.\n\nKey Highlights & Action Items:\n1. Distributed over 5,000 bilingual citizen rights handbooks detailing reporting channels to NCB and State Police.\n2. Conducted forensic awareness workshops showing how clandestine synthetic drugs are masked as pharmaceutical supplements.\n3. Activated 12 institutional whistleblower cells led by trained volunteer paralegals.\n\nRAWF Field Directorate reiterated its unyielding commitment under IFA 760 Charter to protect Indian youth from organized narcotics cartels without compromising citizen privacy.`,
     image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuA7D1Cv8Zz5hHkHWRsC2dBpAnYUkZ0ZCtxYoBPJYBBLwhi71gukNqmUaq1S7ds7-rpnQy9dgKR1hFGJCvg6fdzR0QNDcs1uncde15aH1Cj_ovJ49wdbEnyi3HcgYt1DebTQ0dmp7nUxPXX0IuIC0B3gzWoAkWgk8l0YIc9eLsbfB7lOIuzdvNL7lz5_EFlnw_PjTKNYWFcNsU5OnVumga3256O6DHiOZwcVeUFcPhTvMLAcYBENLi3UaA',
+    mediaType: 'image',
     author: 'Youth Wing National Directorate',
     status: 'Published',
     createdAt: '2026-02-15T10:00:00.000Z'
@@ -749,6 +848,93 @@ async function startServer() {
     }
   });
 
+  // API 1F1A: Upload Authorized Signatory Signature
+  app.post(['/api/upload-signature', '/api/admin/signature'], (req, res) => {
+    const { imageBase64 } = req.body;
+    if (!imageBase64) {
+      return res.status(400).json({ success: false, message: 'No signature image data received.' });
+    }
+    try {
+      const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '');
+      const buffer = Buffer.from(base64Data, 'base64');
+      const publicPath = path.join(process.cwd(), 'public', 'rawf-signature.png');
+      fs.writeFileSync(publicPath, buffer);
+
+      const distDir = path.join(process.cwd(), 'dist');
+      if (fs.existsSync(distDir)) {
+        fs.writeFileSync(path.join(distDir, 'rawf-signature.png'), buffer);
+      }
+
+      const timestamp = Date.now();
+      const infoPath = path.join(process.cwd(), 'public', 'uploads', 'signature-info.json');
+      fs.mkdirSync(path.dirname(infoPath), { recursive: true });
+      fs.writeFileSync(infoPath, JSON.stringify({
+        version: String(timestamp),
+        url: `/rawf-signature.png?v=${timestamp}`,
+        updatedAt: new Date().toISOString()
+      }));
+
+      return res.json({
+        success: true,
+        message: 'Authorized signature updated successfully.',
+        url: `/rawf-signature.png?v=${timestamp}`,
+        version: String(timestamp)
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, message: err?.message || 'Failed to save signature.' });
+    }
+  });
+
+  // API 1F1B: Get Current Signature Metadata
+  app.get(['/api/signature', '/api/signature-info', '/api/admin/signature-info'], (_req, res) => {
+    try {
+      const publicPath = path.join(process.cwd(), 'public', 'rawf-signature.png');
+      const infoPath = path.join(process.cwd(), 'public', 'uploads', 'signature-info.json');
+      let version = String(Date.now());
+      let exists = fs.existsSync(publicPath);
+
+      if (fs.existsSync(infoPath)) {
+        try {
+          const info = JSON.parse(fs.readFileSync(infoPath, 'utf-8'));
+          if (info.version) version = String(info.version);
+        } catch {}
+      } else if (exists) {
+        version = String(Math.floor(fs.statSync(publicPath).mtimeMs));
+      }
+
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      return res.json({
+        success: true,
+        exists,
+        url: exists ? `/rawf-signature.png?v=${version}` : null,
+        version
+      });
+    } catch {
+      return res.json({ success: true, exists: false, url: null, version: '1' });
+    }
+  });
+
+  // API 1F1C: Reset Signature to Default
+  app.post(['/api/reset-signature', '/api/admin/reset-signature'], (_req, res) => {
+    try {
+      const publicPath = path.join(process.cwd(), 'public', 'rawf-signature.png');
+      if (fs.existsSync(publicPath)) {
+        fs.unlinkSync(publicPath);
+      }
+      const distPath = path.join(process.cwd(), 'dist', 'rawf-signature.png');
+      if (fs.existsSync(distPath)) {
+        fs.unlinkSync(distPath);
+      }
+      const infoPath = path.join(process.cwd(), 'public', 'uploads', 'signature-info.json');
+      if (fs.existsSync(infoPath)) {
+        fs.unlinkSync(infoPath);
+      }
+      return res.json({ success: true, message: 'Signature reset to default.' });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, message: err?.message || 'Failed to reset signature.' });
+    }
+  });
+
   // API 1F2: Download Production SQL Schema & Deployment Package
   app.get(['/api/download/sql', '/api/download-schema'], (_req, res) => {
     const sqlPath = path.join(process.cwd(), 'public', 'rawf_production_schema.sql');
@@ -786,6 +972,23 @@ async function startServer() {
       return res.sendFile(zipPath);
     }
     return res.status(404).json({ success: false, message: 'Deployment ZIP package not found.' });
+  });
+
+  // API 1F4: Download Project Commercial Quotation in Microsoft Word (.docx) format
+  app.get(['/api/download/quotation-docx', '/api/download-quotation'], async (_req, res) => {
+    try {
+      const { createQuotationDocument } = await import('./src/utils/quotationDocxGenerator');
+      const { Packer } = await import('docx');
+      const doc = createQuotationDocument();
+      const buffer = await Packer.toBuffer(doc);
+
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      res.setHeader('Content-Disposition', 'attachment; filename="Raid_Action_Wing_Website_Quotation.docx"');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      return res.send(buffer);
+    } catch (err: any) {
+      return res.status(500).json({ success: false, message: err?.message || 'Failed to generate quotation Word document.' });
+    }
   });
 
   // API 1G: Upload / Replace Indian Law PDF Document (Admin)
@@ -988,7 +1191,7 @@ async function startServer() {
 
   // API 5: Public Member Apply
   app.post(['/api/memberships', '/api/applications'], (req, res) => {
-    const { fullName, gender, mobile, email, wing, state, aadhaarNumber, background } = req.body;
+    const { fullName, gender, mobile, email, wing, state, aadhaarNumber, background, transactionId, utrNumber, feeAmount } = req.body;
 
     if (!fullName || !mobile || !email || !wing || !state) {
       return res.status(400).json({ success: false, message: 'Missing mandatory applicant details.' });
@@ -996,6 +1199,21 @@ async function startServer() {
 
     const appId = `RAWF-MEM-${Math.floor(10000 + Math.random() * 90000)}`;
     const last4 = aadhaarNumber ? String(aadhaarNumber).slice(-4) : 'XXXX';
+    const txn = String(transactionId || utrNumber || '').trim();
+
+    // Determine standard prescribed fee according to role
+    let standardFee = 3500;
+    if (wing === 'Only Member') {
+      standardFee = 3500;
+    } else if (wing.startsWith('District')) {
+      standardFee = 5100;
+    } else if (wing.startsWith('State')) {
+      standardFee = 7100;
+    } else if (wing.startsWith('National') || wing === 'Founder' || wing.includes('Director General')) {
+      standardFee = 11100;
+    }
+
+    const finalFee = Number(feeAmount) || standardFee;
 
     const newApp: any = {
       id: appId,
@@ -1010,6 +1228,10 @@ async function startServer() {
       state: String(state).trim(),
       aadhaarLast4: last4,
       background: background || '',
+      transactionId: txn,
+      utrNumber: txn,
+      feeAmount: finalFee,
+      paymentStatus: txn ? 'Paid / Under Verification' : 'Pending',
       submittedAt: new Date().toISOString(),
       status: 'Pending Verification'
     };
@@ -1020,8 +1242,8 @@ async function startServer() {
     mailTransporter.sendMail({
       from: process.env.SMTP_FROM || '"Raid Action Wing Foundation" <info@raidactionwing.in>',
       to: 'andrew000us@gmail.com, info@raidactionwing.in',
-      subject: `[RAWF Application] New Member Application: ${appId}`,
-      text: `A new member application was submitted.\nApplication ID: ${appId}\nName: ${fullName}\nEmail: ${email}\nMobile: ${mobile}\nWing: ${wing}\nState: ${state}\nAadhaar Last 4: ${last4}`,
+      subject: `[RAWF Application] New Member Application: ${appId} - ₹${finalFee}`,
+      text: `A new member application was submitted.\nApplication ID: ${appId}\nName: ${fullName}\nEmail: ${email}\nMobile: ${mobile}\nRole / Wing: ${wing}\nFee Amount: Rs. ${finalFee}\nTransaction ID / UTR: ${txn}\nState: ${state}\nAadhaar Last 4: ${last4}`,
       html: `
         <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #16a34a; border-radius: 8px;">
           <h2 style="color: #16a34a; margin-top: 0;">New RAWF Membership Application</h2>
@@ -1029,7 +1251,9 @@ async function startServer() {
           <p><strong>Applicant Name:</strong> ${fullName}</p>
           <p><strong>Email:</strong> ${email}</p>
           <p><strong>Mobile:</strong> ${mobile}</p>
-          <p><strong>Preferred Wing:</strong> ${wing}</p>
+          <p><strong>Preferred Role / Wing:</strong> ${wing}</p>
+          <p><strong>Prescribed Fee:</strong> ₹${finalFee.toLocaleString('en-IN')}</p>
+          <p><strong>UPI Transaction ID / UTR:</strong> ${txn || 'Not Provided'}</p>
           <p><strong>State:</strong> ${state}</p>
           <p><strong>Aadhaar Last 4:</strong> ${last4}</p>
           <p style="font-size: 11px; color: #64748b;">Submitted at: ${new Date().toISOString()}</p>
@@ -1968,8 +2192,42 @@ async function startServer() {
     res.json({ success: true, count: activitiesDatabase.length, data: activitiesDatabase });
   });
 
+  // Upload Video File Endpoint for Activities / Blog
+  app.post('/api/admin/activities/upload-video', (req, res) => {
+    const { videoBase64, fileName } = req.body;
+    if (!videoBase64) {
+      return res.status(400).json({ success: false, message: 'No video data received.' });
+    }
+    try {
+      const cleanBase64 = videoBase64.replace(/^data:video\/[^;]+;base64,/, '');
+      const buffer = Buffer.from(cleanBase64, 'base64');
+
+      const safeName = (fileName || `activity-video-${Date.now()}.mp4`).replace(/[^a-zA-Z0-9._-]/g, '_');
+      const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'videos');
+      fs.mkdirSync(uploadDir, { recursive: true });
+
+      const targetPath = path.join(uploadDir, safeName);
+      fs.writeFileSync(targetPath, buffer);
+
+      const distDir = path.join(process.cwd(), 'dist', 'uploads', 'videos');
+      if (fs.existsSync(path.join(process.cwd(), 'dist'))) {
+        fs.mkdirSync(distDir, { recursive: true });
+        fs.writeFileSync(path.join(distDir, safeName), buffer);
+      }
+
+      const videoUrl = `/uploads/videos/${safeName}`;
+      return res.json({
+        success: true,
+        message: 'Video file uploaded successfully.',
+        url: videoUrl
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, message: err?.message || 'Failed to save video.' });
+    }
+  });
+
   app.post('/api/admin/activities', requireAdminAuth, (req, res) => {
-    const { title, category, date, location, description, content, image, author, status } = req.body;
+    const { title, category, date, location, description, content, image, author, status, mediaType, videoUrl, videoType } = req.body;
 
     if (!title) {
       return res.status(400).json({ success: false, message: 'Activity title is required.' });
@@ -1986,7 +2244,10 @@ async function startServer() {
       location: location || 'National Command',
       description: description || cleanTitle,
       content: content || description || cleanTitle,
-      image: image || 'https://lh3.googleusercontent.com/aida-public/AB6AXuA7D1Cv8Zz5hHkHWRsC2dBpAnYUkZ0ZCtxYoBPJYBBLwhi71gukNqmUaq1S7ds7-rpnQy9dgKR1hFGJCvg6fdzR0QNDcs1uncde15aH1Cj_ovJ49wdbEnyi3HcgYt1DebTQ0dmp7nUxPXX0IuIC0B3gzWoAkWgk8l0YIc9eLsbfB7lOIuzdvNL7lz5_EFlnw_PjTKNYWFcNsU5OnVumga3256O6DHiOZwcVeUFcPhTvMLAcYBENLi3UaA',
+      image: image || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&q=80&w=600',
+      mediaType: mediaType || (videoUrl ? 'video' : 'image'),
+      videoUrl: videoUrl || undefined,
+      videoType: videoType || undefined,
       author: author || 'RAWF National Command',
       status: (status as any) || 'Published',
       createdAt: new Date().toISOString()
@@ -2013,7 +2274,10 @@ async function startServer() {
       location: req.body.location || existing.location,
       description: req.body.description || existing.description,
       content: req.body.content || existing.content,
-      image: req.body.image || existing.image,
+      image: req.body.image !== undefined ? req.body.image : existing.image,
+      mediaType: req.body.mediaType || existing.mediaType || 'image',
+      videoUrl: req.body.videoUrl !== undefined ? req.body.videoUrl : existing.videoUrl,
+      videoType: req.body.videoType !== undefined ? req.body.videoType : existing.videoType,
       author: req.body.author || existing.author,
       status: req.body.status || existing.status
     };
@@ -2064,6 +2328,129 @@ async function startServer() {
     res.json({ success: true, message: `Category '${removed}' removed.`, data: activityCategoriesDatabase });
   });
 
+  // ==========================================
+  // CERTIFICATES & STATUTORY ACCREDITATIONS API
+  // ==========================================
+
+  // Public Certificates Endpoint
+  app.get('/api/certificates', (_req, res) => {
+    const published = certificatesDatabase.filter((c) => c.status === 'Published');
+    res.json({ success: true, count: published.length, data: published });
+  });
+
+  // Admin Certificates CRUD
+  app.get('/api/admin/certificates', requireAdminAuth, (_req, res) => {
+    res.json({ success: true, count: certificatesDatabase.length, data: certificatesDatabase });
+  });
+
+  // Admin Certificate File Upload (PDF or Image)
+  app.post('/api/admin/certificates/upload', requireAdminAuth, (req, res) => {
+    const { fileBase64, fileName, fileType } = req.body;
+    if (!fileBase64) {
+      return res.status(400).json({ success: false, message: 'No file data received.' });
+    }
+
+    try {
+      const isPdf = fileType === 'pdf' || fileName?.toLowerCase().endsWith('.pdf') || fileBase64.startsWith('data:application/pdf');
+      const ext = isPdf ? 'pdf' : (fileName ? path.extname(fileName).replace('.', '') : 'jpg') || 'jpg';
+      const cleanFileName = `cert_${Date.now()}_${(fileName || 'document').replace(/[^a-zA-Z0-9_-]/g, '_')}.${ext}`;
+      
+      const targetDir = path.resolve(__dirname, 'public/uploads/certificates');
+      if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true });
+      }
+
+      const filePath = path.join(targetDir, cleanFileName);
+      const pureBase64 = fileBase64.includes(',') ? fileBase64.split(',')[1] : fileBase64;
+      const fileBuffer = Buffer.from(pureBase64, 'base64');
+      fs.writeFileSync(filePath, fileBuffer);
+
+      // Also copy to dist if dist exists
+      const distDir = path.resolve(__dirname, 'dist/uploads/certificates');
+      if (fs.existsSync(distDir)) {
+        fs.writeFileSync(path.join(distDir, cleanFileName), fileBuffer);
+      }
+
+      const fileUrl = `/uploads/certificates/${cleanFileName}`;
+      const fileSizeKb = `${(fileBuffer.length / 1024).toFixed(1)} KB`;
+
+      return res.json({
+        success: true,
+        message: 'Certificate file uploaded successfully.',
+        url: fileUrl,
+        fileName: cleanFileName,
+        fileType: isPdf ? 'pdf' : 'image',
+        fileSize: fileSizeKb
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, message: err?.message || 'Failed to save certificate file.' });
+    }
+  });
+
+  app.post('/api/admin/certificates', requireAdminAuth, (req, res) => {
+    const { title, description, fileUrl, fileType, fileName, fileSize, registrationNumber, issuingAuthority, issueDate, category, status } = req.body;
+    if (!title || !fileUrl) {
+      return res.status(400).json({ success: false, message: 'Title and document file are required.' });
+    }
+
+    const newCert: CertificateRecord = {
+      id: `cert-${Date.now()}`,
+      title: title.trim(),
+      description: (description || '').trim(),
+      fileUrl,
+      fileType: fileType || (fileUrl.toLowerCase().endsWith('.pdf') ? 'pdf' : 'image'),
+      fileName: fileName || path.basename(fileUrl),
+      fileSize: fileSize || 'Document',
+      registrationNumber: registrationNumber || '',
+      issuingAuthority: issuingAuthority || '',
+      issueDate: issueDate || new Date().toISOString().slice(0, 10),
+      category: category || 'Government Accreditation',
+      status: status || 'Published',
+      createdAt: new Date().toISOString()
+    };
+
+    certificatesDatabase.unshift(newCert);
+    res.json({ success: true, message: `Certificate '${newCert.title}' published successfully.`, data: newCert });
+  });
+
+  app.put('/api/admin/certificates/:id', requireAdminAuth, (req, res) => {
+    const { id } = req.params;
+    const index = certificatesDatabase.findIndex((c) => c.id === id);
+    if (index === -1) {
+      return res.status(404).json({ success: false, message: 'Certificate not found.' });
+    }
+
+    const existing = certificatesDatabase[index];
+    const updated: CertificateRecord = {
+      ...existing,
+      title: req.body.title !== undefined ? req.body.title : existing.title,
+      description: req.body.description !== undefined ? req.body.description : existing.description,
+      fileUrl: req.body.fileUrl !== undefined ? req.body.fileUrl : existing.fileUrl,
+      fileType: req.body.fileType !== undefined ? req.body.fileType : existing.fileType,
+      fileName: req.body.fileName !== undefined ? req.body.fileName : existing.fileName,
+      fileSize: req.body.fileSize !== undefined ? req.body.fileSize : existing.fileSize,
+      registrationNumber: req.body.registrationNumber !== undefined ? req.body.registrationNumber : existing.registrationNumber,
+      issuingAuthority: req.body.issuingAuthority !== undefined ? req.body.issuingAuthority : existing.issuingAuthority,
+      issueDate: req.body.issueDate !== undefined ? req.body.issueDate : existing.issueDate,
+      category: req.body.category !== undefined ? req.body.category : existing.category,
+      status: req.body.status !== undefined ? req.body.status : existing.status
+    };
+
+    certificatesDatabase[index] = updated;
+    res.json({ success: true, message: `Certificate '${updated.title}' updated successfully.`, data: updated });
+  });
+
+  app.delete('/api/admin/certificates/:id', requireAdminAuth, (req, res) => {
+    const { id } = req.params;
+    const index = certificatesDatabase.findIndex((c) => c.id === id);
+    if (index === -1) {
+      return res.status(404).json({ success: false, message: 'Certificate not found.' });
+    }
+
+    const removed = certificatesDatabase.splice(index, 1)[0];
+    res.json({ success: true, message: `Certificate '${removed.title}' removed.` });
+  });
+
   // Admin System Settings
   app.get('/api/admin/settings', requireAdminAuth, (_req, res) => {
     res.json({ success: true, data: systemSettings });
@@ -2085,6 +2472,7 @@ async function startServer() {
       blacklisted: blacklistedDatabase,
       activities: activitiesDatabase,
       activityCategories: activityCategoriesDatabase,
+      certificates: certificatesDatabase,
       events: eventsDatabase,
       settings: systemSettings
     };

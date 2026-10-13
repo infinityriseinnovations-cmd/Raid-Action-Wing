@@ -58,6 +58,7 @@ export interface BlacklistedOfficer {
 export interface MemberApplication {
   applicationId: string;
   fullName: string;
+  gender?: string;
   mobile: string;
   email: string;
   wing: string;
@@ -65,6 +66,10 @@ export interface MemberApplication {
   aadhaarLast4: string;
   voterId?: string;
   background: string;
+  transactionId?: string;
+  utrNumber?: string;
+  feeAmount?: number;
+  paymentStatus?: string;
   submittedAt: string;
   status: 'Pending Verification' | 'Approved' | 'Rejected' | 'Interview Scheduled';
   assignedBadge?: string;
@@ -95,7 +100,26 @@ export interface ActivityRecord {
   description: string;
   content: string;
   image: string;
+  mediaType?: 'image' | 'video';
+  videoType?: 'upload' | 'youtube';
+  videoUrl?: string;
   author?: string;
+  status: 'Published' | 'Draft';
+  createdAt?: string;
+}
+
+export interface CertificateRecord {
+  id: string;
+  title: string;
+  description: string;
+  fileUrl: string;
+  fileType: 'pdf' | 'image';
+  fileName: string;
+  fileSize?: string;
+  registrationNumber?: string;
+  issuingAuthority?: string;
+  issueDate?: string;
+  category?: 'Government Accreditation' | 'Trust Charter' | 'Tax Exemption' | 'Statutory License';
   status: 'Published' | 'Draft';
   createdAt?: string;
 }
@@ -270,6 +294,9 @@ export const membershipApi = {
     state: string;
     aadhaarNumber?: string;
     background?: string;
+    transactionId?: string;
+    utrNumber?: string;
+    feeAmount?: number;
   }) => {
     return apiClient.post<ApiResponse & { applicationId: string }>('/api/memberships', application);
   },
@@ -371,6 +398,43 @@ export const activitiesApi = {
   delete: (id: string, token: string) => {
     return apiClient.delete<ApiResponse>(`/api/admin/activities/${encodeURIComponent(id)}`, undefined, token);
   },
+
+  uploadVideo: (videoBase64: string, fileName: string, token: string) => {
+    return apiClient.post<ApiResponse<{ url: string }>>(
+      '/api/admin/activities/upload-video',
+      { videoBase64, fileName },
+      token
+    );
+  },
+};
+
+/**
+ * Statutory Certificates & Accreditations API
+ */
+export const certificatesApi = {
+  getAll: () => {
+    return apiClient.get<ApiResponse<CertificateRecord[]>>('/api/certificates');
+  },
+
+  create: (cert: Partial<CertificateRecord>, token: string) => {
+    return apiClient.post<ApiResponse<CertificateRecord>>('/api/admin/certificates', cert, token);
+  },
+
+  update: (id: string, cert: Partial<CertificateRecord>, token: string) => {
+    return apiClient.put<ApiResponse<CertificateRecord>>(`/api/admin/certificates/${encodeURIComponent(id)}`, cert, token);
+  },
+
+  delete: (id: string, token: string) => {
+    return apiClient.delete<ApiResponse>(`/api/admin/certificates/${encodeURIComponent(id)}`, undefined, token);
+  },
+
+  uploadFile: (fileBase64: string, fileName: string, fileType: 'pdf' | 'image', token: string) => {
+    return apiClient.post<ApiResponse<{ url: string; fileName: string; fileType: 'pdf' | 'image'; fileSize?: string }>>(
+      '/api/admin/certificates/upload',
+      { fileBase64, fileName, fileType },
+      token
+    );
+  }
 };
 
 /**

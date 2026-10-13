@@ -80,8 +80,12 @@ export interface ActivityRecord {
   description: string;
   content: string;
   image: string;
+  mediaType?: 'image' | 'video';
+  videoUrl?: string;
+  videoType?: 'youtube' | 'upload';
   author: string;
   status: 'Published' | 'Draft';
+  createdAt?: string;
 }
 
 export const INITIAL_OFFICERS: OfficerRecord[] = [
@@ -262,6 +266,21 @@ export const INITIAL_DONATIONS: DonationRecord[] = [
 
 export const INITIAL_ACTIVITIES: ActivityRecord[] = [
   {
+    id: 'act-field-taskforce-briefing-2026',
+    title: 'Special Field Taskforce Briefing & Operational Dispatch',
+    category: 'Field Taskforce',
+    date: '12/10/2026',
+    location: 'National Command HQ & Northern Sector',
+    description: 'Official video briefing dispatch on encrypted intelligence coordination, field vigilance protocols, and emergency whistleblower assistance under the IFA 760 Charter.',
+    content: 'The National Action Command of Raid Action Wing Foundation (RAWF) has released an official operational briefing video for registered Field Taskforce officers, regional vigilance coordinators, and civilian volunteers.\n\nKey Directives & Protocols Covered in the Video Broadcast:\n1. Verification Procedures under Section 204 BNS: Mandatory digital QR validation of credentials before initiating any preliminary inquiries.\n2. Encrypted Whistleblower Support: Routing sensitive institutional corruption dossiers directly through the zero-knowledge grievance portal.\n3. Inter-Agency Coordination: Ensuring formal escalation to statutory enforcement authorities including the State Anti-Corruption Bureau and Lokayukta.\n\nOfficers are instructed to review the full video dispatch above and verify operational readiness with their respective Zonal Directors.',
+    image: '/uploads/videos/rawf-field-briefing-poster.jpg',
+    mediaType: 'video',
+    videoType: 'upload',
+    videoUrl: '/uploads/videos/rawf-field-briefing-test-video.mp4',
+    author: 'National Action Command HQ',
+    status: 'Published'
+  },
+  {
     id: 1,
     title: 'National Anti-Corruption Conclave 2026 Held at New Delhi',
     category: 'National Command',
@@ -270,6 +289,7 @@ export const INITIAL_ACTIVITIES: ActivityRecord[] = [
     description: 'Over 450 field vigilance officers convened for the annual strategy session on digital evidence collection and constitutional whistleblower defense.',
     content: 'The National Command Council under Director General Nilesh Thakar declared a nationwide crackdown on bogus NGO representations and launched the automated IFA 760 Digital Verification Portal.',
     image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&q=80&w=600',
+    mediaType: 'image',
     author: 'RAWF National Command',
     status: 'Published'
   },
@@ -352,3 +372,66 @@ export const INITIAL_SETTINGS = {
   nitiAayogDarpan: 'DL/2021/RAWF',
   msmeUdyam: 'UP-50-0196301'
 };
+
+export const INITIAL_CERTIFICATES: any[] = [
+  {
+    id: 'cert-msme-udyam',
+    title: 'MSME UDYAM Registration Certificate',
+    description: 'Statutory MSME Enterprise accreditation validating Raid Action Wing Foundation under enterprise registration framework by Ministry of Micro, Small and Medium Enterprises, Government of India.',
+    fileUrl: '/uploads/certificates/rawf-msme-udyam-certificate.pdf',
+    fileType: 'pdf',
+    fileName: 'rawf-msme-udyam-certificate.pdf',
+    fileSize: '8.6 KB',
+    registrationNumber: 'UP-50-0196301',
+    issuingAuthority: 'Ministry of MSME, Govt. of India',
+    issueDate: '20/03/2023',
+    category: 'Government Accreditation',
+    status: 'Published',
+    createdAt: '2023-03-20T10:00:00.000Z'
+  },
+  {
+    id: 'cert-niti-aayog-darpan',
+    title: 'NITI Aayog NGO Darpan Registration',
+    description: 'Official NGO Darpan unique identification granting recognition for voluntary vigilance oversight, institutional audits, and civic human rights initiatives across India.',
+    fileUrl: '/uploads/certificates/rawf-niti-aayog-darpan.pdf',
+    fileType: 'pdf',
+    fileName: 'rawf-niti-aayog-darpan.pdf',
+    fileSize: '8.5 KB',
+    registrationNumber: 'DL/2021/RAWF',
+    issuingAuthority: 'NITI Aayog, Government of India',
+    issueDate: '11/08/2021',
+    category: 'Government Accreditation',
+    status: 'Published',
+    createdAt: '2021-08-11T11:30:00.000Z'
+  },
+  {
+    id: 'cert-ifa-760-charter',
+    title: 'Indian Trusts Act 1882 Statutory Charter (IFA 760)',
+    description: 'Fundamental founding trust deed and national vigilance charter empowering RAWF investigative oversight, citizen whistleblower intake, and pro bono legal advocacy nationwide.',
+    fileUrl: '/uploads/certificates/rawf-ifa-760-trust-charter.pdf',
+    fileType: 'pdf',
+    fileName: 'rawf-ifa-760-trust-charter.pdf',
+    fileSize: '8.6 KB',
+    registrationNumber: 'IFA No. 760 / Reg. No. 448/2023',
+    issuingAuthority: 'Sub-Registrar Statutory Registry, Govt. of NCT of Delhi',
+    issueDate: '12/01/2023',
+    category: 'Trust Charter',
+    status: 'Published',
+    createdAt: '2023-01-12T09:00:00.000Z'
+  },
+  {
+    id: 'cert-12a-80g-tax-exemption',
+    title: 'Income Tax Exemption Order (Section 12A & 80G)',
+    description: 'Recognized non-profit taxation exemption enabling 50% tax deduction for philanthropic citizen contributions under Section 80G of the Income Tax Act, 1961.',
+    fileUrl: '/uploads/certificates/rawf-12a-80g-tax-exemption.pdf',
+    fileType: 'pdf',
+    fileName: 'rawf-12a-80g-tax-exemption.pdf',
+    fileSize: '8.1 KB',
+    registrationNumber: 'AAATR8892EF20231',
+    issuingAuthority: 'Income Tax Department, Ministry of Finance, Govt. of India',
+    issueDate: '18/04/2023',
+    category: 'Tax Exemption',
+    status: 'Published',
+    createdAt: '2023-04-18T14:00:00.000Z'
+  }
+];

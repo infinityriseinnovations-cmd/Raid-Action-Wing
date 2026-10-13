@@ -1,8 +1,10 @@
 import React from 'react';
 import { RawfLogo } from './RawfLogo';
+import { AuthorizedSignature } from './AuthorizedSignature';
 import { toStandardDisplayDate } from '../utils/dateUtils';
 
 export interface OfficialIdCardData {
+  id?: string;
   uidNumber?: string;
   badgeNumber?: string;
   name: string;
@@ -106,11 +108,11 @@ export const OfficialIdCard: React.FC<OfficialIdCardProps> = ({
             </div>
 
             {/* 2. CARD BODY: PHOTO + DETAILS + CUSTOM QR + SIGNATURE */}
-            <div className="px-3.5 pt-2 pb-1.5 flex-1 flex flex-col justify-between bg-white overflow-hidden">
+            <div className="px-3.5 pt-1.5 pb-3 flex-1 flex flex-col justify-between bg-white overflow-hidden">
               <div className="flex gap-3.5 items-start">
-                {/* Photo Box (Height 154px to fill bottom gap down towards barcode) */}
+                {/* Photo Box (Height 148px to leave comfortable bottom space for barcode & signature) */}
                 <div className="w-[108px] shrink-0 flex flex-col items-center">
-                  <div className="w-[108px] h-[154px] bg-slate-50 border border-[#333333] overflow-hidden flex items-center justify-center shadow-2xs relative" data-nosnippet>
+                  <div className="w-[108px] h-[148px] bg-slate-50 border border-[#333333] overflow-hidden flex items-center justify-center shadow-2xs relative" data-nosnippet>
                     {photoUrl ? (
                       <img
                         src={photoUrl}
@@ -141,8 +143,8 @@ export const OfficialIdCard: React.FC<OfficialIdCardProps> = ({
                   </div>
                 </div>
 
-                {/* Content Space & Height from UID No. to Expiry Date (Height 154px to fill bottom gap down towards signature) */}
-                <div className="font-id-sans flex-1 h-[154px] flex flex-col justify-between text-black font-bold text-[12.5px] sm:text-[13px] leading-tight">
+                {/* Content Space & Height from UID No. to Expiry Date */}
+                <div className="font-id-sans flex-1 h-[148px] flex flex-col justify-between text-black font-bold text-[12.5px] sm:text-[13px] leading-tight">
                   <div className="grid grid-cols-[82px_12px_1fr] items-baseline">
                     <span className="font-id-sans font-bold text-black uppercase">UID No.</span>
                     <span className="font-id-sans font-bold text-black text-center">:</span>
@@ -185,9 +187,9 @@ export const OfficialIdCard: React.FC<OfficialIdCardProps> = ({
 
               {/* Bottom Row inside Body: Barcode directly under Photo on Left + Signature on Right */}
               <div className="flex items-end justify-between pt-1">
-                {/* Code 128 Barcode directly under photo (Width 108px) */}
-                <div className="w-[108px] flex justify-center">
-                  <svg className="w-full h-[25px]" viewBox="0 0 108 25" fill="currentColor">
+                {/* Code 128 Barcode directly under photo (Width 108px) with bottom breathing room */}
+                <div className="w-[108px] flex flex-col items-center justify-end">
+                  <svg className="w-full h-[22px]" viewBox="0 0 108 25" fill="currentColor">
                     <rect x="0" y="0" width="2.5" height="25" fill="#000" />
                     <rect x="4" y="0" width="1.2" height="25" fill="#000" />
                     <rect x="7" y="0" width="3.2" height="25" fill="#000" />
@@ -218,12 +220,18 @@ export const OfficialIdCard: React.FC<OfficialIdCardProps> = ({
                   </svg>
                 </div>
 
-                {/* Authorised Signature Row (Right-Aligned) */}
-                <div className="text-right pr-2">
-                  <div className="font-id-sign text-slate-800 text-[18px] sm:text-[20px] leading-none select-none font-bold pr-1">
-                    Manoj Chauhan
+                {/* Authorised Signature & Signatory Unit (Right-Aligned, tight to signature as in reference) */}
+                <div className="flex flex-col items-end justify-end text-right pr-1">
+                  <div className="max-w-[130px] flex items-end justify-end">
+                    <AuthorizedSignature
+                      className="w-auto flex items-end justify-end"
+                      imgClassName="max-h-[28px] max-w-[130px] object-contain object-bottom"
+                      fallbackText="Manoj Chauhan"
+                      fallbackClassName="font-id-sign text-slate-800 text-[19px] sm:text-[21px] leading-none select-none font-bold pr-0.5 block"
+                      alt="Authorised Signatory Manoj Chauhan"
+                    />
                   </div>
-                  <div className="font-id-sans font-bold text-[#0f3889] text-[10.5px] sm:text-[11.5px] uppercase tracking-tight mt-0.5">
+                  <div className="font-id-sans font-bold text-[#1b2a72] text-[10.5px] sm:text-[11.5px] tracking-tight leading-none mt-0 select-none">
                     Authorised Signatory
                   </div>
                 </div>

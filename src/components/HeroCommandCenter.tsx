@@ -5,9 +5,10 @@ import { DirectorBroadcastVideo } from './DirectorBroadcastVideo';
 interface HeroCommandCenterProps {
   onOpenVerifyModal: (prefillId?: string) => void;
   lang: 'en' | 'hi';
+  onNavigate?: (page: string) => void;
 }
 
-export const HeroCommandCenter: React.FC<HeroCommandCenterProps> = ({ onOpenVerifyModal, lang }) => {
+export const HeroCommandCenter: React.FC<HeroCommandCenterProps> = ({ onOpenVerifyModal, lang, onNavigate }) => {
   const [quickOfficerId, setQuickOfficerId] = useState('');
 
   const [dossierCode, setDossierCode] = useState('');
@@ -86,6 +87,71 @@ export const HeroCommandCenter: React.FC<HeroCommandCenterProps> = ({ onOpenVeri
               <p className="text-slate-600 text-base sm:text-lg leading-relaxed pt-2 max-w-2xl text-justify [text-align-last:left]">
                 <strong className="text-slate-900 font-semibold">Raid Action Wing Foundation (RAWF)</strong> is India's premier citizen vigilance, social investigation, and constitutional oversight collective. We compile judicial-grade evidence, protect whistleblowers, and collaborate with constitutional law enforcement bodies to ensure an accountable, crime-free nation.
               </p>
+            </div>
+
+            {/* DUAL PROMINENT HIGHLIGHTED BUTTONS: CERTIFICATES & FIELD ACTIVITIES/BLOG */}
+            <div className="pt-1 pb-1">
+              <div className="p-2 sm:p-2.5 bg-gradient-to-r from-amber-500/10 via-blue-500/10 to-red-500/10 rounded-xl border border-amber-300/60 shadow-xs flex flex-col sm:flex-row gap-2.5 sm:gap-3">
+                {/* 1. Official Certificates & Accreditations Button */}
+                <button
+                  type="button"
+                  onClick={() => onNavigate ? onNavigate('certificates') : (window.location.hash = 'certificates-page')}
+                  className="flex-1 group relative overflow-hidden bg-gradient-to-r from-[#0d47a1] via-[#1565c0] to-[#0a3875] hover:from-[#0a3875] hover:to-[#0d47a1] text-white p-3 sm:p-3.5 rounded-lg border-2 border-amber-400 shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer text-left flex items-center justify-between"
+                  title="View Official Government Registrations, MSME, NITI Aayog Darpan & IFA 760 Trust Charter"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-10 h-10 rounded-lg bg-amber-400/20 border border-amber-300/40 text-amber-300 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                      <span className="material-symbols-outlined text-2xl">workspace_premium</span>
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-amber-300 bg-amber-400/20 px-1.5 py-0.5 rounded">
+                          Official Verified
+                        </span>
+                        <span className="text-[10px] text-blue-200 font-mono hidden xs:inline">
+                          MSME · DARPAN · IFA 760
+                        </span>
+                      </div>
+                      <div className="font-headline font-black text-xs sm:text-sm uppercase tracking-wide text-white truncate mt-0.5">
+                        Official Certificates
+                      </div>
+                    </div>
+                  </div>
+                  <span className="material-symbols-outlined text-amber-300 text-xl group-hover:translate-x-1 transition-transform shrink-0 ml-2">
+                    arrow_forward
+                  </span>
+                </button>
+
+                {/* 2. Field Activities & Blog Dispatches Button */}
+                <button
+                  type="button"
+                  onClick={() => onNavigate ? onNavigate('activities') : (window.location.hash = 'activities-page')}
+                  className="flex-1 group relative overflow-hidden bg-white hover:bg-slate-50 text-slate-900 p-3 sm:p-3.5 rounded-lg border-2 border-red-500 shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer text-left flex items-center justify-between"
+                  title="View Field Operations, Raids, Blog Articles & Video Dispatches"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-10 h-10 rounded-lg bg-red-50 border border-red-200 text-red-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                      <span className="material-symbols-outlined text-2xl">campaign</span>
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-red-600 bg-red-50 px-1.5 py-0.5 rounded">
+                          Ground Operations
+                        </span>
+                        <span className="text-[10px] text-slate-500 font-mono hidden xs:inline">
+                          Video Dispatches &amp; Articles
+                        </span>
+                      </div>
+                      <div className="font-headline font-black text-xs sm:text-sm uppercase tracking-wide text-slate-900 truncate mt-0.5">
+                        Activities &amp; Blog
+                      </div>
+                    </div>
+                  </div>
+                  <span className="material-symbols-outlined text-red-600 text-xl group-hover:translate-x-1 transition-transform shrink-0 ml-2">
+                    arrow_forward
+                  </span>
+                </button>
+              </div>
             </div>
 
             {/* Quick Action Cards Hub */}
