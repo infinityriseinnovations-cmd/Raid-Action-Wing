@@ -41,6 +41,18 @@ function getDbConnection() {
             PDO::ATTR_EMULATE_PREPARES => false,
         ];
         $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
+        try {
+            $colCheck = $pdo->query("SHOW COLUMNS FROM officers LIKE 'is_assigned'");
+            if ($colCheck && $colCheck->rowCount() === 0) {
+                $pdo->exec("ALTER TABLE officers ADD COLUMN is_assigned TINYINT(1) NOT NULL DEFAULT 1");
+            }
+        } catch (Exception $e) {}
+        try {
+            $blColCheck = $pdo->query("SHOW COLUMNS FROM officer_blacklists LIKE 'photo_url'");
+            if ($blColCheck && $blColCheck->rowCount() === 0) {
+                $pdo->exec("ALTER TABLE officer_blacklists ADD COLUMN photo_url TEXT DEFAULT NULL");
+            }
+        } catch (Exception $e) {}
         return $pdo;
     } catch (PDOException $e) {
         // Return null if DB is not reachable; fallback to mock/in-memory response

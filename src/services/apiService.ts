@@ -406,6 +406,14 @@ export const activitiesApi = {
       token
     );
   },
+
+  reorder: (orderedIds: string[], token: string) => {
+    return apiClient.post<ApiResponse<ActivityRecord[]>>(
+      '/api/admin/activities/reorder',
+      { orderedIds },
+      token
+    );
+  },
 };
 
 /**
@@ -426,6 +434,14 @@ export const certificatesApi = {
 
   delete: (id: string, token: string) => {
     return apiClient.delete<ApiResponse>(`/api/admin/certificates/${encodeURIComponent(id)}`, undefined, token);
+  },
+
+  reorder: (orderedIds: string[], token: string) => {
+    return apiClient.post<ApiResponse<CertificateRecord[]>>(
+      '/api/admin/certificates/reorder',
+      { orderedIds },
+      token
+    );
   },
 
   uploadFile: (fileBase64: string, fileName: string, fileType: 'pdf' | 'image', token: string) => {

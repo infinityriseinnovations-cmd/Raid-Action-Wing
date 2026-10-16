@@ -23,7 +23,7 @@ import {
   INITIAL_STATS,
   INITIAL_SETTINGS
 } from '../data/defaultAdminData';
-import { certificatesApi, CertificateRecord } from '../services/apiService';
+import { certificatesApi, CertificateRecord, activitiesApi } from '../services/apiService';
 
 interface AdminPageProps {
   onNavigate: (page: string) => void;
@@ -364,6 +364,12 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
     status: 'Published'
   });
 
+  // Drag and drop reordering states for Activities and Certificates
+  const [draggedActivityId, setDraggedActivityId] = useState<string | null>(null);
+  const [dragOverActivityId, setDragOverActivityId] = useState<string | null>(null);
+  const [draggedCertId, setDraggedCertId] = useState<string | null>(null);
+  const [dragOverCertId, setDragOverCertId] = useState<string | null>(null);
+
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [testEmailAddress, setTestEmailAddress] = useState('andrew000us@gmail.com');
   const [testEmailLoading, setTestEmailLoading] = useState(false);
@@ -408,8 +414,34 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
         safeFetchJson('/api/admin/settings')
       ]);
 
-      if (statsData && statsData.success) setServerStats(statsData.stats);
-      if (offData && offData.success && Array.isArray(offData.data) && offData.data.length > 0) setOfficers(offData.data);
+      if (offData && offData.success && Array.isArray(offData.data)) {
+        setOfficers((prev) => {
+          const serverOfficers = offData.data.map((o: any) => ({
+            ...o,
+            id: o.id || o.uidNumber || o.uid_number,
+            uidNumber: o.uidNumber || o.uid_number || o.badge_number || o.id,
+            badgeNumber: o.badgeNumber || o.badge_number || o.uidNumber || o.id,
+            name: o.name || o.fullName || 'Officer',
+            photoUrl: o.photoUrl || o.photo_url || '',
+            phoneContact: o.phoneContact || o.phone_contact || '',
+            validTill: o.validTill || o.valid_till || '11-09-2027',
+            joinDate: o.joinDate || o.join_date || '2024-09-11',
+            dob: o.dob || '1995-12-20',
+            division: o.division || 'state',
+            state: o.state || 'National',
+            status: o.status || 'ACTIVE',
+            isAssigned: o.isAssigned !== undefined ? Boolean(o.isAssigned) : (o.is_assigned !== undefined ? Boolean(o.is_assigned) : true)
+          }));
+          const serverKeys = new Set(serverOfficers.map((s: any) => String(s.uidNumber || s.id).toUpperCase()));
+          const unmergedLocal = prev.filter((p) => !serverKeys.has(String(p.uidNumber || p.id).toUpperCase()));
+          const merged = [...serverOfficers, ...unmergedLocal];
+          try {
+            localStorage.setItem('rawf_data_officers', JSON.stringify(merged));
+            window.dispatchEvent(new CustomEvent('rawf_officers_updated'));
+          } catch {}
+          return merged;
+        });
+      }
       if (appData && appData.success && Array.isArray(appData.data)) {
         setApplications((prev) => {
           const serverList = appData.data;
@@ -1201,6 +1233,79 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
     } catch {}
   };
 
+  // Activities Reordering Handlers (Drag & Drop + Up/Down Sort)
+  const handleMoveActivity = async (item: any, direction: 'up' | 'down') => {
+    const visibleIndex = filteredActivities.findIndex((a) => a.id === item.id);
+    if (visibleIndex === -1) return;
+    const targetVisibleIndex = direction === 'up' ? visibleIndex - 1 : visibleIndex + 1;
+    if (targetVisibleIndex < 0 || targetVisibleIndex >= filteredActivities.length) return;
+
+    const targetItem = filteredActivities[targetVisibleIndex];
+    const sourceIdx = activities.findIndex((a) => a.id === item.id);
+    const targetIdx = activities.findIndex((a) => a.id === targetItem.id);
+    if (sourceIdx === -1 || targetIdx === -1) return;
+
+    const newActivities = [...activities];
+    const [moved] = newActivities.splice(sourceIdx, 1);
+    newActivities.splice(targetIdx, 0, moved);
+
+    setActivities(newActivities);
+    try {
+      localStorage.setItem('rawf_data_activities', JSON.stringify(newActivities));
+    } catch {}
+    window.dispatchEvent(new CustomEvent('rawf_activities_reordered', { detail: newActivities }));
+
+    if (token) {
+      try {
+        await activitiesApi.reorder(newActivities.map((a) => a.id), token);
+      } catch (err) {
+        console.warn('API activities reorder sync failed:', err);
+      }
+    }
+    setFeedbackMsg({
+      type: 'success',
+      text: `Moved "${moved.title?.slice(0, 32)}..." ${direction}. New sequence saved.`
+    });
+  };
+
+  const handleDropActivity = async (targetId: string) => {
+    if (!draggedActivityId || draggedActivityId === targetId) {
+      setDraggedActivityId(null);
+      setDragOverActivityId(null);
+      return;
+    }
+    const sourceIdx = activities.findIndex((a) => a.id === draggedActivityId);
+    const targetIdx = activities.findIndex((a) => a.id === targetId);
+    if (sourceIdx === -1 || targetIdx === -1) {
+      setDraggedActivityId(null);
+      setDragOverActivityId(null);
+      return;
+    }
+    const newActivities = [...activities];
+    const [moved] = newActivities.splice(sourceIdx, 1);
+    newActivities.splice(targetIdx, 0, moved);
+
+    setActivities(newActivities);
+    try {
+      localStorage.setItem('rawf_data_activities', JSON.stringify(newActivities));
+    } catch {}
+    window.dispatchEvent(new CustomEvent('rawf_activities_reordered', { detail: newActivities }));
+
+    if (token) {
+      try {
+        await activitiesApi.reorder(newActivities.map((a) => a.id), token);
+      } catch (err) {
+        console.warn('API activities reorder sync failed:', err);
+      }
+    }
+    setFeedbackMsg({
+      type: 'success',
+      text: `Reordered: "${moved.title?.slice(0, 32)}..." repositioned. Order saved.`
+    });
+    setDraggedActivityId(null);
+    setDragOverActivityId(null);
+  };
+
   // Activity Categories Management Handlers
   const handleAddCategory = async (nameToAdd?: string): Promise<string | null> => {
     const targetName = (nameToAdd || newCategoryNameInput).trim();
@@ -1429,6 +1534,79 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
 
     setCertificates((prev) => prev.filter((c) => c.id !== cert.id));
     setFeedbackMsg({ type: 'success', text: `Certificate '${cert.title}' removed.` });
+  };
+
+  // Certificates Reordering Handlers (Drag & Drop + Up/Down Sort)
+  const handleMoveCertificate = async (item: CertificateRecord, direction: 'up' | 'down') => {
+    const visibleIndex = filteredCertificates.findIndex((c) => c.id === item.id);
+    if (visibleIndex === -1) return;
+    const targetVisibleIndex = direction === 'up' ? visibleIndex - 1 : visibleIndex + 1;
+    if (targetVisibleIndex < 0 || targetVisibleIndex >= filteredCertificates.length) return;
+
+    const targetItem = filteredCertificates[targetVisibleIndex];
+    const sourceIdx = certificates.findIndex((c) => c.id === item.id);
+    const targetIdx = certificates.findIndex((c) => c.id === targetItem.id);
+    if (sourceIdx === -1 || targetIdx === -1) return;
+
+    const newCertificates = [...certificates];
+    const [moved] = newCertificates.splice(sourceIdx, 1);
+    newCertificates.splice(targetIdx, 0, moved);
+
+    setCertificates(newCertificates);
+    try {
+      localStorage.setItem('rawf_data_certificates', JSON.stringify(newCertificates));
+    } catch {}
+    window.dispatchEvent(new CustomEvent('rawf_certificates_reordered', { detail: newCertificates }));
+
+    if (token) {
+      try {
+        await certificatesApi.reorder(newCertificates.map((c) => c.id), token);
+      } catch (err) {
+        console.warn('API certificates reorder sync failed:', err);
+      }
+    }
+    setFeedbackMsg({
+      type: 'success',
+      text: `Moved "${moved.title?.slice(0, 32)}..." ${direction}. New sequence saved.`
+    });
+  };
+
+  const handleDropCertificate = async (targetId: string) => {
+    if (!draggedCertId || draggedCertId === targetId) {
+      setDraggedCertId(null);
+      setDragOverCertId(null);
+      return;
+    }
+    const sourceIdx = certificates.findIndex((c) => c.id === draggedCertId);
+    const targetIdx = certificates.findIndex((c) => c.id === targetId);
+    if (sourceIdx === -1 || targetIdx === -1) {
+      setDraggedCertId(null);
+      setDragOverCertId(null);
+      return;
+    }
+    const newCertificates = [...certificates];
+    const [moved] = newCertificates.splice(sourceIdx, 1);
+    newCertificates.splice(targetIdx, 0, moved);
+
+    setCertificates(newCertificates);
+    try {
+      localStorage.setItem('rawf_data_certificates', JSON.stringify(newCertificates));
+    } catch {}
+    window.dispatchEvent(new CustomEvent('rawf_certificates_reordered', { detail: newCertificates }));
+
+    if (token) {
+      try {
+        await certificatesApi.reorder(newCertificates.map((c) => c.id), token);
+      } catch (err) {
+        console.warn('API certificates reorder sync failed:', err);
+      }
+    }
+    setFeedbackMsg({
+      type: 'success',
+      text: `Reordered: "${moved.title?.slice(0, 32)}..." repositioned. Order saved.`
+    });
+    setDraggedCertId(null);
+    setDragOverCertId(null);
   };
 
   // 1-Click JSON Backup
@@ -1696,6 +1874,18 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
       (act.description && act.description.toLowerCase().includes(q)) ||
       (act.content && act.content.toLowerCase().includes(q));
     return matchCat && matchQuery;
+  });
+
+  const filteredCertificates = certificates.filter((c) => {
+    const matchesSearch =
+      (c.title || '').toLowerCase().includes(certificateSearch.toLowerCase()) ||
+      (c.description || '').toLowerCase().includes(certificateSearch.toLowerCase()) ||
+      (c.registrationNumber || '').toLowerCase().includes(certificateSearch.toLowerCase()) ||
+      (c.issuingAuthority || '').toLowerCase().includes(certificateSearch.toLowerCase());
+    const matchesCategory =
+      certificateFilterCategory === 'All' ||
+      (c.category && c.category.toLowerCase() === certificateFilterCategory.toLowerCase());
+    return matchesSearch && matchesCategory;
   });
 
   // ==========================================
@@ -2730,10 +2920,27 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
               </button>
             </div>
 
+            {/* Drag & Drop / Up & Down Ordering Guide Strip */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 bg-blue-50/70 border border-blue-200/80 rounded-lg text-xs text-blue-900">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[#0d47a1] text-base shrink-0">drag_indicator</span>
+                <div>
+                  <span className="font-bold text-[#0d47a1]">Manage Display Ordering: </span>
+                  <span className="text-slate-700">Drag rows using the grip handle or click the <strong>[↑] / [↓]</strong> buttons to reposition posts. The custom order is saved automatically to determine display sequence on the public portal.</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                <span className="px-2 py-0.5 bg-white border border-blue-200 rounded font-mono text-[11px] font-bold text-[#0d47a1] shadow-2xs">
+                  {filteredActivities.length} {filteredActivities.length === 1 ? 'Post' : 'Posts'} Ordered
+                </span>
+              </div>
+            </div>
+
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
                   <tr className="bg-slate-100 text-slate-700 font-bold uppercase border-b border-slate-200">
+                    <th className="p-3 w-28 text-center font-bold text-slate-700 uppercase" title="Reorder posts using Drag & Drop or Up/Down arrows">Order</th>
                     <th className="p-3 w-16">Cover</th>
                     <th className="p-3">Title & Summary</th>
                     <th className="p-3">Category / Wing</th>
@@ -2743,8 +2950,95 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-sans">
-                  {filteredActivities.map((act) => (
-                    <tr key={act.id} className="hover:bg-slate-50/80 transition-colors">
+                  {filteredActivities.map((act, index) => {
+                    const isDragging = draggedActivityId === act.id;
+                    const isDragOver = dragOverActivityId === act.id;
+                    return (
+                      <tr
+                        key={act.id}
+                        draggable
+                        onDragStart={(e) => {
+                          setDraggedActivityId(act.id);
+                          e.dataTransfer.effectAllowed = 'move';
+                          e.dataTransfer.setData('text/plain', act.id);
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = 'move';
+                          if (dragOverActivityId !== act.id) {
+                            setDragOverActivityId(act.id);
+                          }
+                        }}
+                        onDragLeave={() => {
+                          if (dragOverActivityId === act.id) {
+                            setDragOverActivityId(null);
+                          }
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          handleDropActivity(act.id);
+                        }}
+                        onDragEnd={() => {
+                          setDraggedActivityId(null);
+                          setDragOverActivityId(null);
+                        }}
+                        className={`transition-all duration-150 ${
+                          isDragging
+                            ? 'opacity-40 bg-blue-100/70 border-2 border-dashed border-[#0d47a1]'
+                            : isDragOver
+                            ? 'bg-blue-50 border-t-2 border-t-[#0d47a1] shadow-xs'
+                            : 'hover:bg-slate-50/80'
+                        }`}
+                      >
+                        <td className="p-2.5 text-center whitespace-nowrap">
+                          <div className="flex items-center justify-center gap-1.5">
+                            {/* Drag Handle */}
+                            <div
+                              className="cursor-grab active:cursor-grabbing p-1 rounded text-slate-400 hover:text-[#0d47a1] hover:bg-slate-200/80 transition-colors"
+                              title="Click and drag to reorder this activity"
+                            >
+                              <span className="material-symbols-outlined text-[18px] leading-none select-none">drag_indicator</span>
+                            </div>
+
+                            {/* Position Badge */}
+                            <span
+                              className="font-mono text-[11px] font-bold px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded border border-slate-200 min-w-[28px] text-center"
+                              title={`Display Sequence Position #${index + 1}`}
+                            >
+                              #{index + 1}
+                            </span>
+
+                            {/* Up / Down Sort Buttons */}
+                            <div className="flex flex-col gap-0.5">
+                              <button
+                                type="button"
+                                disabled={index === 0}
+                                onClick={() => handleMoveActivity(act, 'up')}
+                                className={`p-0.5 rounded transition-colors ${
+                                  index === 0
+                                    ? 'text-slate-300 cursor-not-allowed'
+                                    : 'text-slate-600 hover:text-[#0d47a1] hover:bg-blue-100 cursor-pointer'
+                                }`}
+                                title="Move up in order"
+                              >
+                                <span className="material-symbols-outlined text-[15px] leading-none">keyboard_arrow_up</span>
+                              </button>
+                              <button
+                                type="button"
+                                disabled={index === filteredActivities.length - 1}
+                                onClick={() => handleMoveActivity(act, 'down')}
+                                className={`p-0.5 rounded transition-colors ${
+                                  index === filteredActivities.length - 1
+                                    ? 'text-slate-300 cursor-not-allowed'
+                                    : 'text-slate-600 hover:text-[#0d47a1] hover:bg-blue-100 cursor-pointer'
+                                }`}
+                                title="Move down in order"
+                              >
+                                <span className="material-symbols-outlined text-[15px] leading-none">keyboard_arrow_down</span>
+                              </button>
+                            </div>
+                          </div>
+                        </td>
                       <td className="p-3">
                         <div className="relative w-14 h-11 rounded border border-slate-200 overflow-hidden bg-slate-900">
                           <img
@@ -2854,10 +3148,11 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                         </button>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                   {filteredActivities.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="p-8 text-center text-slate-400 text-xs">
+                      <td colSpan={7} className="p-8 text-center text-slate-400 text-xs">
                         No activity articles found matching search criteria.
                       </td>
                     </tr>
@@ -2916,11 +3211,28 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
               </div>
             </div>
 
+            {/* Drag & Drop / Up & Down Ordering Guide Strip */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 bg-amber-50/70 border border-amber-200/80 rounded-lg text-xs text-amber-900">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-amber-700 text-base shrink-0">drag_indicator</span>
+                <div>
+                  <span className="font-bold text-amber-800">Manage Certificate Ordering: </span>
+                  <span className="text-slate-700">Drag rows using the grip handle or use the <strong>[↑] / [↓]</strong> buttons to reposition certificates. The sequence is immediately saved and determines display order on the public certificates &amp; accreditation portal.</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                <span className="px-2 py-0.5 bg-white border border-amber-300 rounded font-mono text-[11px] font-bold text-amber-800 shadow-2xs">
+                  {filteredCertificates.length} {filteredCertificates.length === 1 ? 'Certificate' : 'Certificates'} Ordered
+                </span>
+              </div>
+            </div>
+
             {/* Certificates Table */}
             <div className="overflow-x-auto border border-slate-200 rounded-lg">
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-50 text-slate-600 font-bold uppercase border-b border-slate-200">
                   <tr>
+                    <th className="p-3 w-28 text-center font-bold text-slate-700 uppercase" title="Reorder certificates using Drag & Drop or Up/Down arrows">Order</th>
                     <th className="p-3 w-16 text-center">Type</th>
                     <th className="p-3">Title &amp; Reg. Number</th>
                     <th className="p-3">Issuing Authority &amp; Category</th>
@@ -2930,22 +3242,96 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {certificates
-                    .filter((c) => {
-                      const matchesSearch =
-                        (c.title || '').toLowerCase().includes(certificateSearch.toLowerCase()) ||
-                        (c.description || '').toLowerCase().includes(certificateSearch.toLowerCase()) ||
-                        (c.registrationNumber || '').toLowerCase().includes(certificateSearch.toLowerCase()) ||
-                        (c.issuingAuthority || '').toLowerCase().includes(certificateSearch.toLowerCase());
-                      const matchesCategory =
-                        certificateFilterCategory === 'All' ||
-                        (c.category && c.category.toLowerCase() === certificateFilterCategory.toLowerCase());
-                      return matchesSearch && matchesCategory;
-                    })
-                    .map((cert) => {
-                      const isPdf = cert.fileType === 'pdf' || (cert.fileUrl && cert.fileUrl.toLowerCase().endsWith('.pdf'));
-                      return (
-                        <tr key={cert.id} className="hover:bg-slate-50/80 transition-colors">
+                  {filteredCertificates.map((cert, index) => {
+                    const isDragging = draggedCertId === cert.id;
+                    const isDragOver = dragOverCertId === cert.id;
+                    const isPdf = cert.fileType === 'pdf' || (cert.fileUrl && cert.fileUrl.toLowerCase().endsWith('.pdf'));
+                    return (
+                      <tr
+                        key={cert.id}
+                        draggable
+                        onDragStart={(e) => {
+                          setDraggedCertId(cert.id);
+                          e.dataTransfer.effectAllowed = 'move';
+                          e.dataTransfer.setData('text/plain', cert.id);
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = 'move';
+                          if (dragOverCertId !== cert.id) {
+                            setDragOverCertId(cert.id);
+                          }
+                        }}
+                        onDragLeave={() => {
+                          if (dragOverCertId === cert.id) {
+                            setDragOverCertId(null);
+                          }
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          handleDropCertificate(cert.id);
+                        }}
+                        onDragEnd={() => {
+                          setDraggedCertId(null);
+                          setDragOverCertId(null);
+                        }}
+                        className={`transition-all duration-150 ${
+                          isDragging
+                            ? 'opacity-40 bg-amber-100/70 border-2 border-dashed border-amber-500'
+                            : isDragOver
+                            ? 'bg-amber-50/70 border-t-2 border-t-amber-600 shadow-xs'
+                            : 'hover:bg-slate-50/80'
+                        }`}
+                      >
+                        <td className="p-2.5 text-center whitespace-nowrap">
+                          <div className="flex items-center justify-center gap-1.5">
+                            {/* Drag Handle */}
+                            <div
+                              className="cursor-grab active:cursor-grabbing p-1 rounded text-slate-400 hover:text-amber-700 hover:bg-slate-200/80 transition-colors"
+                              title="Click and drag to reorder this certificate"
+                            >
+                              <span className="material-symbols-outlined text-[18px] leading-none select-none">drag_indicator</span>
+                            </div>
+
+                            {/* Position Badge */}
+                            <span
+                              className="font-mono text-[11px] font-bold px-1.5 py-0.5 bg-amber-50 text-amber-900 rounded border border-amber-200 min-w-[28px] text-center"
+                              title={`Display Rank #${index + 1}`}
+                            >
+                              #{index + 1}
+                            </span>
+
+                            {/* Up / Down Sort Buttons */}
+                            <div className="flex flex-col gap-0.5">
+                              <button
+                                type="button"
+                                disabled={index === 0}
+                                onClick={() => handleMoveCertificate(cert, 'up')}
+                                className={`p-0.5 rounded transition-colors ${
+                                  index === 0
+                                    ? 'text-slate-300 cursor-not-allowed'
+                                    : 'text-slate-600 hover:text-[#0d47a1] hover:bg-blue-100 cursor-pointer'
+                                }`}
+                                title="Move up in order"
+                              >
+                                <span className="material-symbols-outlined text-[15px] leading-none">keyboard_arrow_up</span>
+                              </button>
+                              <button
+                                type="button"
+                                disabled={index === filteredCertificates.length - 1}
+                                onClick={() => handleMoveCertificate(cert, 'down')}
+                                className={`p-0.5 rounded transition-colors ${
+                                  index === filteredCertificates.length - 1
+                                    ? 'text-slate-300 cursor-not-allowed'
+                                    : 'text-slate-600 hover:text-[#0d47a1] hover:bg-blue-100 cursor-pointer'
+                                }`}
+                                title="Move down in order"
+                              >
+                                <span className="material-symbols-outlined text-[15px] leading-none">keyboard_arrow_down</span>
+                              </button>
+                            </div>
+                          </div>
+                        </td>
                           <td className="p-3 text-center">
                             <div className={`w-10 h-10 mx-auto rounded-lg flex items-center justify-center font-bold ${
                               isPdf ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-blue-50 text-[#0d47a1] border border-blue-200'
@@ -3029,7 +3415,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
 
                   {certificates.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="p-8 text-center text-slate-400 text-xs">
+                      <td colSpan={7} className="p-8 text-center text-slate-400 text-xs">
                         No certificates uploaded yet. Click "+ Upload Certificate" to add your first statutory registration.
                       </td>
                     </tr>

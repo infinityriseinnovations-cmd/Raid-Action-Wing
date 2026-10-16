@@ -231,7 +231,18 @@ const officersDatabase: Officer[] = [
   }
 ];
 
-// Try reading physical uploaded officers if present
+// Try reading physical uploaded certificates and officers if present
+try {
+  const certFilePath = path.join(process.cwd(), 'public', 'uploads', 'certificates.json');
+  if (fs.existsSync(certFilePath)) {
+    const raw = fs.readFileSync(certFilePath, 'utf-8');
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      certificatesDatabase.splice(0, certificatesDatabase.length, ...parsed);
+    }
+  }
+} catch {}
+
 try {
   const offFilePath = path.join(process.cwd(), 'public', 'uploads', 'officers.json');
   if (fs.existsSync(offFilePath)) {
@@ -446,6 +457,17 @@ const activitiesDatabase: ActivityRecord[] = [
     createdAt: '2026-03-08T10:00:00.000Z'
   }
 ];
+
+try {
+  const actFilePath = path.join(process.cwd(), 'public', 'uploads', 'activities.json');
+  if (fs.existsSync(actFilePath)) {
+    const raw = fs.readFileSync(actFilePath, 'utf-8');
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      activitiesDatabase.splice(0, activitiesDatabase.length, ...parsed);
+    }
+  }
+} catch {}
 
 let activityCategoriesDatabase: string[] = [
   'Youth Wing',
@@ -692,6 +714,20 @@ async function startServer() {
 
   // API 1: Public Officers Directory
   app.get('/api/officers', (req, res) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+    res.setHeader('Pragma', 'no-cache');
+
+    try {
+      const offFilePath = path.join(process.cwd(), 'public', 'uploads', 'officers.json');
+      if (fs.existsSync(offFilePath)) {
+        const raw = fs.readFileSync(offFilePath, 'utf-8');
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          officersDatabase.splice(0, officersDatabase.length, ...parsed);
+        }
+      }
+    } catch {}
+
     const { division, search } = req.query;
     let results = [...officersDatabase];
 
@@ -706,7 +742,8 @@ async function startServer() {
           o.name.toLowerCase().includes(q) ||
           o.designation.toLowerCase().includes(q) ||
           o.state.toLowerCase().includes(q) ||
-          o.badgeNumber.toLowerCase().includes(q)
+          (o.badgeNumber && o.badgeNumber.toLowerCase().includes(q)) ||
+          (o.uidNumber && o.uidNumber.toLowerCase().includes(q))
       );
     }
 
@@ -715,11 +752,26 @@ async function startServer() {
 
   // API 1B: Public Blacklisted Officers Directory
   app.get('/api/blacklist', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
     res.json({ success: true, count: blacklistedDatabase.length, data: blacklistedDatabase });
   });
 
   // API 1C: Public Activities & Field Operations Dispatches (Blog Section)
   app.get('/api/activities', (req, res) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+    res.setHeader('Pragma', 'no-cache');
+
+    try {
+      const actFilePath = path.join(process.cwd(), 'public', 'uploads', 'activities.json');
+      if (fs.existsSync(actFilePath)) {
+        const raw = fs.readFileSync(actFilePath, 'utf-8');
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          activitiesDatabase.splice(0, activitiesDatabase.length, ...parsed);
+        }
+      }
+    } catch {}
+
     const { category, search } = req.query;
     let list = activitiesDatabase.filter((a) => a.status === 'Published');
 
@@ -2298,6 +2350,28 @@ async function startServer() {
     res.json({ success: true, message: `Activity '${removed.title}' removed.` });
   });
 
+  app.post('/api/admin/activities/reorder', requireAdminAuth, (req, res) => {
+    const { orderedIds } = req.body;
+    if (!Array.isArray(orderedIds)) {
+      return res.status(400).json({ success: false, message: 'orderedIds array required' });
+    }
+    const idMap = new Map(activitiesDatabase.map((a) => [a.id, a]));
+    const reordered: ActivityRecord[] = [];
+    for (const id of orderedIds) {
+      const item = idMap.get(id);
+      if (item) {
+        reordered.push(item);
+        idMap.delete(id);
+      }
+    }
+    for (const remaining of idMap.values()) {
+      reordered.push(remaining);
+    }
+    activitiesDatabase.length = 0;
+    activitiesDatabase.push(...reordered);
+    res.json({ success: true, message: 'Activities display order saved.', data: activitiesDatabase });
+  });
+
   // Admin Activities Categories CRUD
   app.get('/api/admin/activities/categories', requireAdminAuth, (_req, res) => {
     res.json({ success: true, count: activityCategoriesDatabase.length, data: activityCategoriesDatabase });
@@ -2334,6 +2408,20 @@ async function startServer() {
 
   // Public Certificates Endpoint
   app.get('/api/certificates', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+    res.setHeader('Pragma', 'no-cache');
+
+    try {
+      const certFilePath = path.join(process.cwd(), 'public', 'uploads', 'certificates.json');
+      if (fs.existsSync(certFilePath)) {
+        const raw = fs.readFileSync(certFilePath, 'utf-8');
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          certificatesDatabase.splice(0, certificatesDatabase.length, ...parsed);
+        }
+      }
+    } catch {}
+
     const published = certificatesDatabase.filter((c) => c.status === 'Published');
     res.json({ success: true, count: published.length, data: published });
   });
@@ -2449,6 +2537,28 @@ async function startServer() {
 
     const removed = certificatesDatabase.splice(index, 1)[0];
     res.json({ success: true, message: `Certificate '${removed.title}' removed.` });
+  });
+
+  app.post('/api/admin/certificates/reorder', requireAdminAuth, (req, res) => {
+    const { orderedIds } = req.body;
+    if (!Array.isArray(orderedIds)) {
+      return res.status(400).json({ success: false, message: 'orderedIds array required' });
+    }
+    const idMap = new Map(certificatesDatabase.map((c) => [c.id, c]));
+    const reordered: CertificateRecord[] = [];
+    for (const id of orderedIds) {
+      const item = idMap.get(id);
+      if (item) {
+        reordered.push(item);
+        idMap.delete(id);
+      }
+    }
+    for (const remaining of idMap.values()) {
+      reordered.push(remaining);
+    }
+    certificatesDatabase.length = 0;
+    certificatesDatabase.push(...reordered);
+    res.json({ success: true, message: 'Certificates display order saved.', data: certificatesDatabase });
   });
 
   // Admin System Settings

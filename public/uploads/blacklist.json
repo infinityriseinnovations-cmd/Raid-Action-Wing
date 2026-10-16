@@ -1,0 +1,35 @@
+[
+  {
+    "id": "RW-DIS-091",
+    "uidNumber": "RW-DIS-091",
+    "badgeNumber": "RW-DIS-091",
+    "name": "Suresh Verma (Former Probationer)",
+    "jurisdiction": "Delhi NCR",
+    "revocationDate": "15-JAN-2024",
+    "reason": "Misrepresenting RAWF as official police agency, attempting unauthorized document seizure and soliciting funds from shopkeepers.",
+    "status": "REVOKED & BLACKLISTED",
+    "photoUrl": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=300"
+  },
+  {
+    "id": "RW-DL-TEMP-44",
+    "uidNumber": "RW-DL-TEMP-44",
+    "badgeNumber": "RW-DL-TEMP-44",
+    "name": "Kailash Nath Sharma",
+    "jurisdiction": "Uttar Pradesh",
+    "revocationDate": "02-AUG-2024",
+    "reason": "Expiration of temporary volunteer badge; refused return of physical credentials; issued fake inspection threats.",
+    "status": "REVOKED & BLACKLISTED",
+    "photoUrl": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=300"
+  },
+  {
+    "id": "RW-MH-EXT-01",
+    "uidNumber": "RW-MH-EXT-01",
+    "badgeNumber": "RW-MH-EXT-01",
+    "name": "Pradeep R. Kadam",
+    "jurisdiction": "Maharashtra",
+    "revocationDate": "10-NOV-2024",
+    "reason": "Extortion complaint registered at local police station; expelled from RAWF membership with immediate criminal complaint filed.",
+    "status": "REVOKED & BLACKLISTED",
+    "photoUrl": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=300"
+  }
+]

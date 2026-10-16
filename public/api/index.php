@@ -94,6 +94,77 @@ function saveJsonStore($name, $data) {
     @file_put_contents($file, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 }
 
+// Helper: Standardize officer record ensuring cross-device compatibility and both camelCase and snake_case support
+function normalizeOfficerRecord($row) {
+    if (!is_array($row)) return [];
+    $uid = $row['uid_number'] ?? $row['uidNumber'] ?? $row['badge_number'] ?? $row['badgeNumber'] ?? $row['id'] ?? '';
+    $badge = $row['badge_number'] ?? $row['badgeNumber'] ?? $uid;
+    $name = $row['name'] ?? $row['fullName'] ?? 'Officer';
+
+    $isAssigned = true;
+    if (isset($row['is_assigned'])) {
+        $isAssigned = (bool)$row['is_assigned'];
+    } elseif (isset($row['isAssigned'])) {
+        $isAssigned = (bool)$row['isAssigned'];
+    } elseif (isset($row['assigned'])) {
+        $isAssigned = (bool)$row['assigned'];
+    }
+
+    $photoUrl = $row['photo_url'] ?? $row['photoUrl'] ?? '';
+    $phoneContact = $row['phone_contact'] ?? $row['phoneContact'] ?? '';
+    $validTill = $row['valid_till'] ?? $row['validTill'] ?? '11-09-2027';
+    $joinDate = $row['join_date'] ?? $row['joinDate'] ?? '2024-09-11';
+    $dob = $row['dob'] ?? '1995-12-20';
+    $gender = $row['gender'] ?? 'Male';
+    $designation = $row['designation'] ?? 'Field Officer';
+    $division = $row['division'] ?? 'state';
+    $state = $row['state'] ?? 'National';
+    $status = $row['status'] ?? 'ACTIVE';
+    $email = $row['email'] ?? '';
+    $mandate = $row['mandate'] ?? 'Citizen Vigilance & Anti-Corruption Oversight';
+
+    return [
+        'id' => (string)($row['id'] ?? $uid),
+        'uidNumber' => (string)$uid,
+        'badgeNumber' => (string)$badge,
+        'name' => (string)$name,
+        'fullName' => (string)$name,
+        'gender' => (string)$gender,
+        'dob' => (string)$dob,
+        'joinDate' => (string)$joinDate,
+        'validTill' => (string)$validTill,
+        'expiryDate' => (string)$validTill,
+        'phoneContact' => (string)$phoneContact,
+        'email' => (string)$email,
+        'designation' => (string)$designation,
+        'division' => (string)$division,
+        'state' => (string)$state,
+        'status' => (string)$status,
+        'photoUrl' => (string)$photoUrl,
+        'mandate' => (string)$mandate,
+        'isAssigned' => (bool)$isAssigned,
+        'isActive' => $status !== 'REVOKED & BLACKLISTED'
+    ];
+}
+
+// Helper: Convert any date string (e.g. '14 OCT 2026', '11/09/2024') into MySQL strict DATE format 'YYYY-MM-DD'
+function sanitizeDbDate($d) {
+    if (empty($d)) return null;
+    $d = trim((string)$d);
+    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $d)) return $d;
+    $time = strtotime($d);
+    if ($time !== false && $time > 0) return date('Y-m-d', $time);
+    $parts = explode('/', $d);
+    if (count($parts) === 3) {
+        if (strlen($parts[2]) === 4) {
+            // DD/MM/YYYY
+            $ts = strtotime("{$parts[2]}-{$parts[1]}-{$parts[0]}");
+            if ($ts !== false && $ts > 0) return date('Y-m-d', $ts);
+        }
+    }
+    return null;
+}
+
 // ==========================================================================
 // HIGH-DELIVERABILITY OFFICIAL EMAIL SENDER (NATIVE SMTP + PHP MAIL FALLBACK)
 // ==========================================================================
@@ -1084,21 +1155,6 @@ if ($route === 'officers/verify' || $route === 'officer/verify') {
     exit;
 }
 
-if ($route === 'officers' && $method === 'GET') {
-    $officers = [];
-    if ($pdo) {
-        try {
-            $stmt = $pdo->query("SELECT * FROM officers WHERE status = 'ACTIVE' OR status = 'VERIFIED' OR status = 'COMMAND' ORDER BY id ASC");
-            $officers = $stmt->fetchAll();
-        } catch (Exception $e) {}
-    }
-    if (empty($officers)) {
-        $officers = getJsonStore('officers', []);
-    }
-    echo json_encode(['success' => true, 'data' => $officers]);
-    exit;
-}
-
 if (($route === 'blacklist' || $route === 'admin/blacklist') && $method === 'GET') {
     $blacklist = [];
     if ($pdo) {
@@ -1178,9 +1234,99 @@ if ($routeParts[0] === 'admin' && isset($routeParts[1]) && $routeParts[1] === 'b
 }
 
 // ==========================================================================
+// 6B. PUBLIC OFFICERS DIRECTORY API (MULTI-DEVICE ROSTER SYNCHRONIZATION)
+// ==========================================================================
+if ($route === 'officers' || ($routeParts[0] === 'officers' && (!isset($routeParts[1]) || $routeParts[1] === ''))) {
+    if ($method === 'GET') {
+        header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+        header('Pragma: no-cache');
+
+        $division = $_GET['division'] ?? 'all';
+        $search = trim($_GET['search'] ?? '');
+        
+        $officersMap = [];
+        if ($pdo) {
+            try {
+                $stmt = $pdo->query("SELECT * FROM officers ORDER BY is_assigned DESC, id ASC");
+                $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($rows as $row) {
+                    $norm = normalizeOfficerRecord($row);
+                    $key = strtoupper($norm['uidNumber'] ?: $norm['id']);
+                    if ($key) $officersMap[$key] = $norm;
+                }
+            } catch (Exception $e) {}
+        }
+
+        // Always merge with uploads/officers.json (so new officers immediately sync across all devices)
+        $jsonOfficers = getJsonStore('officers', []);
+        foreach ($jsonOfficers as $jo) {
+            $norm = normalizeOfficerRecord($jo);
+            $key = strtoupper($norm['uidNumber'] ?: $norm['id']);
+            if ($key) {
+                if (isset($officersMap[$key])) {
+                    $officersMap[$key] = array_merge($officersMap[$key], $norm);
+                } else {
+                    $officersMap[$key] = $norm;
+                }
+            }
+        }
+
+        $officers = array_values($officersMap);
+
+        if ($division !== 'all' && !empty($division)) {
+            $officers = array_filter($officers, function($o) use ($division) {
+                return strcasecmp($o['division'] ?? '', $division) === 0;
+            });
+            $officers = array_values($officers);
+        }
+        if (!empty($search)) {
+            $q = strtolower($search);
+            $officers = array_filter($officers, function($o) use ($q) {
+                return (
+                    strpos(strtolower($o['name'] ?? ''), $q) !== false ||
+                    strpos(strtolower($o['designation'] ?? ''), $q) !== false ||
+                    strpos(strtolower($o['state'] ?? ''), $q) !== false ||
+                    strpos(strtolower($o['badgeNumber'] ?? ''), $q) !== false ||
+                    strpos(strtolower($o['uidNumber'] ?? ''), $q) !== false
+                );
+            });
+            $officers = array_values($officers);
+        }
+
+        echo json_encode(['success' => true, 'count' => count($officers), 'data' => $officers]);
+        exit;
+    }
+}
+
+// ==========================================================================
 // 7. ADMIN OFFICERS CRUD & PHOTO DISK PERSISTENCE
 // ==========================================================================
 if ($routeParts[0] === 'admin' && isset($routeParts[1]) && $routeParts[1] === 'officers') {
+    if (isset($routeParts[2]) && $routeParts[2] === 'reorder' && $method === 'POST') {
+        $orderedIds = $input['orderedIds'] ?? [];
+        if (is_array($orderedIds)) {
+            $allOfficers = getJsonStore('officers', []);
+            $offMap = [];
+            foreach ($allOfficers as $o) {
+                $k = $o['uidNumber'] ?? $o['id'] ?? '';
+                if ($k) $offMap[$k] = $o;
+            }
+            $reordered = [];
+            foreach ($orderedIds as $oid) {
+                if (isset($offMap[$oid])) {
+                    $reordered[] = $offMap[$oid];
+                    unset($offMap[$oid]);
+                }
+            }
+            foreach ($offMap as $rem) {
+                $reordered[] = $rem;
+            }
+            saveJsonStore('officers', $reordered);
+            echo json_encode(['success' => true, 'message' => 'Officers display order saved.', 'data' => $reordered]);
+            exit;
+        }
+    }
+
     $remaining = isset($routeParts[2]) ? implode('/', array_slice($routeParts, 2)) : '';
     $isBlacklist = false;
     if (preg_match('#^(.*?)/blacklist$#i', $remaining, $bm)) {
@@ -1191,17 +1337,35 @@ if ($routeParts[0] === 'admin' && isset($routeParts[1]) && $routeParts[1] === 'o
     }
 
     if ($method === 'GET' && empty($subId)) {
-        $officers = [];
+        header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+        header('Pragma: no-cache');
+
+        $officersMap = [];
         if ($pdo) {
             try {
-                $stmt = $pdo->query("SELECT * FROM officers ORDER BY id ASC");
-                $officers = $stmt->fetchAll();
+                $stmt = $pdo->query("SELECT * FROM officers ORDER BY is_assigned DESC, id ASC");
+                $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($rows as $row) {
+                    $norm = normalizeOfficerRecord($row);
+                    $key = strtoupper($norm['uidNumber'] ?: $norm['id']);
+                    if ($key) $officersMap[$key] = $norm;
+                }
             } catch (Exception $e) {}
         }
-        if (empty($officers)) {
-            $officers = getJsonStore('officers', []);
+        $jsonOfficers = getJsonStore('officers', []);
+        foreach ($jsonOfficers as $jo) {
+            $norm = normalizeOfficerRecord($jo);
+            $key = strtoupper($norm['uidNumber'] ?: $norm['id']);
+            if ($key) {
+                if (isset($officersMap[$key])) {
+                    $officersMap[$key] = array_merge($officersMap[$key], $norm);
+                } else {
+                    $officersMap[$key] = $norm;
+                }
+            }
         }
-        echo json_encode(['success' => true, 'data' => $officers]);
+        $officers = array_values($officersMap);
+        echo json_encode(['success' => true, 'count' => count($officers), 'data' => $officers]);
         exit;
     }
 
@@ -1219,6 +1383,7 @@ if ($routeParts[0] === 'admin' && isset($routeParts[1]) && $routeParts[1] === 'o
         $email = $input['email'] ?? '';
         $mandate = $input['mandate'] ?? 'Citizen Vigilance';
         $photoUrl = $input['photoUrl'] ?? '';
+        $isAssigned = isset($input['isAssigned']) ? (bool)$input['isAssigned'] : true;
 
         // Decode Base64 photo to physical disk file
         if (strpos($photoUrl, 'data:image') === 0) {
@@ -1229,7 +1394,7 @@ if ($routeParts[0] === 'admin' && isset($routeParts[1]) && $routeParts[1] === 'o
             }
         }
 
-        $officerRecord = [
+        $officerRecord = normalizeOfficerRecord([
             'id' => $uid,
             'name' => $name,
             'fullName' => $name,
@@ -1247,13 +1412,16 @@ if ($routeParts[0] === 'admin' && isset($routeParts[1]) && $routeParts[1] === 'o
             'photoUrl' => $photoUrl,
             'mandate' => $mandate,
             'status' => 'ACTIVE',
-            'isAssigned' => isset($input['isAssigned']) ? (bool)$input['isAssigned'] : true
-        ];
+            'isAssigned' => $isAssigned
+        ]);
 
         if ($pdo) {
             try {
-                $stmt = $pdo->prepare("INSERT INTO officers (id, uid_number, badge_number, name, designation, division, state, gender, dob, join_date, valid_till, phone_contact, email, photo_url, mandate, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE') ON DUPLICATE KEY UPDATE name=?, designation=?, state=?, phone_contact=?, email=?, photo_url=?, valid_till=?, mandate=?");
-                $stmt->execute([$uid, $uid, $uid, $name, $desig, $division, $state, $gender, $dob, $joinDate, $validTill, $phone, $email, $photoUrl, $mandate, $name, $desig, $state, $phone, $email, $photoUrl, $validTill, $mandate]);
+                $isAssignedInt = $isAssigned ? 1 : 0;
+                $dbDob = sanitizeDbDate($dob) ?: '1995-12-20';
+                $dbJoinDate = sanitizeDbDate($joinDate) ?: '2024-09-11';
+                $stmt = $pdo->prepare("INSERT INTO officers (id, uid_number, badge_number, name, designation, division, state, gender, dob, join_date, valid_till, phone_contact, email, photo_url, mandate, status, is_assigned) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', ?) ON DUPLICATE KEY UPDATE name=?, designation=?, division=?, state=?, phone_contact=?, email=?, photo_url=?, valid_till=?, mandate=?, is_assigned=?");
+                $stmt->execute([$uid, $uid, $uid, $name, $desig, $division, $state, $gender, $dbDob, $dbJoinDate, $validTill, $phone, $email, $photoUrl, $mandate, $isAssignedInt, $name, $desig, $division, $state, $phone, $email, $photoUrl, $validTill, $mandate, $isAssignedInt]);
             } catch (Exception $e) {}
         }
 
@@ -1285,10 +1453,13 @@ if ($routeParts[0] === 'admin' && isset($routeParts[1]) && $routeParts[1] === 'o
             }
         }
 
+        $isAssigned = isset($input['isAssigned']) ? (bool)$input['isAssigned'] : true;
+        $isAssignedInt = $isAssigned ? 1 : 0;
+
         if ($pdo) {
             try {
-                $stmt = $pdo->prepare("UPDATE officers SET name = ?, designation = ?, state = ?, phone_contact = ?, email = ?, photo_url = ?, valid_till = ?, mandate = ? WHERE id = ? OR uid_number = ? OR badge_number = ?");
-                $stmt->execute([$input['name'] ?? '', $input['designation'] ?? '', $input['state'] ?? '', $input['phoneContact'] ?? '', $input['email'] ?? '', $photoUrl, $input['validTill'] ?? '', $input['mandate'] ?? '', $targetUid, $targetUid, $targetUid]);
+                $stmt = $pdo->prepare("UPDATE officers SET name = ?, designation = ?, division = ?, state = ?, phone_contact = ?, email = ?, photo_url = ?, valid_till = ?, mandate = ?, is_assigned = ? WHERE id = ? OR uid_number = ? OR badge_number = ?");
+                $stmt->execute([$input['name'] ?? '', $input['designation'] ?? '', $input['division'] ?? 'state', $input['state'] ?? '', $input['phoneContact'] ?? '', $input['email'] ?? '', $photoUrl, $input['validTill'] ?? '', $input['mandate'] ?? '', $isAssignedInt, $targetUid, $targetUid, $targetUid]);
             } catch (Exception $e) {}
         }
 
@@ -1296,14 +1467,14 @@ if ($routeParts[0] === 'admin' && isset($routeParts[1]) && $routeParts[1] === 'o
         $found = false;
         foreach ($allOfficers as &$off) {
             if (strcasecmp($off['id'] ?? '', $targetUid) === 0 || strcasecmp($off['uidNumber'] ?? '', $targetUid) === 0 || strcasecmp($off['badgeNumber'] ?? '', $targetUid) === 0) {
-                $off = array_merge($off, $input);
+                $off = normalizeOfficerRecord(array_merge($off, $input));
                 if (!empty($photoUrl)) $off['photoUrl'] = $photoUrl;
                 $found = true;
                 break;
             }
         }
         if (!$found) {
-            $newEntry = array_merge(['id' => $targetUid, 'uidNumber' => $targetUid, 'badgeNumber' => $targetUid], $input);
+            $newEntry = normalizeOfficerRecord(array_merge(['id' => $targetUid, 'uidNumber' => $targetUid, 'badgeNumber' => $targetUid], $input));
             if (!empty($photoUrl)) $newEntry['photoUrl'] = $photoUrl;
             array_unshift($allOfficers, $newEntry);
         }
@@ -1449,6 +1620,30 @@ if ($routeParts[0] === 'admin' && isset($routeParts[1]) && $routeParts[1] === 'a
         }
         echo json_encode(['success' => false, 'message' => 'Failed to save video on server.']);
         exit;
+    }
+
+    if (isset($routeParts[2]) && $routeParts[2] === 'reorder' && $method === 'POST') {
+        $orderedIds = $input['orderedIds'] ?? [];
+        if (is_array($orderedIds)) {
+            $acts = getJsonStore('activities', []);
+            $actMap = [];
+            foreach ($acts as $a) {
+                $actMap[$a['id']] = $a;
+            }
+            $reordered = [];
+            foreach ($orderedIds as $oid) {
+                if (isset($actMap[$oid])) {
+                    $reordered[] = $actMap[$oid];
+                    unset($actMap[$oid]);
+                }
+            }
+            foreach ($actMap as $rem) {
+                $reordered[] = $rem;
+            }
+            saveJsonStore('activities', $reordered);
+            echo json_encode(['success' => true, 'message' => 'Activities display order saved.', 'data' => $reordered]);
+            exit;
+        }
     }
 
     $actId = $routeParts[2] ?? null;
@@ -1598,6 +1793,30 @@ if ($routeParts[0] === 'admin' && isset($routeParts[1]) && $routeParts[1] === 'c
         }
         echo json_encode(['success' => false, 'message' => 'Failed to save certificate file.']);
         exit;
+    }
+
+    if (isset($routeParts[2]) && $routeParts[2] === 'reorder' && $method === 'POST') {
+        $orderedIds = $input['orderedIds'] ?? [];
+        if (is_array($orderedIds)) {
+            $certs = getJsonStore('certificates', []);
+            $certMap = [];
+            foreach ($certs as $c) {
+                $certMap[$c['id']] = $c;
+            }
+            $reordered = [];
+            foreach ($orderedIds as $oid) {
+                if (isset($certMap[$oid])) {
+                    $reordered[] = $certMap[$oid];
+                    unset($certMap[$oid]);
+                }
+            }
+            foreach ($certMap as $rem) {
+                $reordered[] = $rem;
+            }
+            saveJsonStore('certificates', $reordered);
+            echo json_encode(['success' => true, 'message' => 'Certificates display order saved.', 'data' => $reordered]);
+            exit;
+        }
     }
 
     $certId = $routeParts[2] ?? null;

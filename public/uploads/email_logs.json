@@ -1,0 +1,26 @@
+[
+    {
+        "to": "manimaransma2@gmail.com",
+        "subject": "[RAWF] Membership Application Received: RAWF-MEM-30420",
+        "sent": true,
+        "method": "SMTP (SSL 465)",
+        "error": null,
+        "timestamp": "2026-10-14 05:33:51"
+    },
+    {
+        "to": "andrew000us@gmail.com",
+        "subject": "[RAWF Intake] New Member Application: RAWF-MEM-30420 - Manimaran test (₹5,100)",
+        "sent": true,
+        "method": "SMTP (SSL 465)",
+        "error": null,
+        "timestamp": "2026-10-14 05:33:51"
+    },
+    {
+        "to": "info@raidactionwing.in",
+        "subject": "[RAWF Intake] New Member Application: RAWF-MEM-30420 - Manimaran test (₹5,100)",
+        "sent": true,
+        "method": "PHP mail() with envelope sender",
+        "error": null,
+        "timestamp": "2026-10-14 05:33:51"
+    }
+]

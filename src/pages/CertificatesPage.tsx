@@ -7,7 +7,16 @@ interface CertificatesPageProps {
 }
 
 export const CertificatesPage: React.FC<CertificatesPageProps> = ({ onNavigate }) => {
-  const [certificates, setCertificates] = useState<CertificateRecord[]>(INITIAL_CERTIFICATES);
+  const [certificates, setCertificates] = useState<CertificateRecord[]>(() => {
+    try {
+      const saved = localStorage.getItem('rawf_data_certificates');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return INITIAL_CERTIFICATES;
+  });
   const [loading, setLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -17,6 +26,28 @@ export const CertificatesPage: React.FC<CertificatesPageProps> = ({ onNavigate }
   // Fetch certificates from backend API, fall back to initial data if needed
   useEffect(() => {
     let isMounted = true;
+
+    // Listen for custom order changes made in Admin Panel
+    const handleReordered = (e: any) => {
+      if (e.detail && Array.isArray(e.detail) && e.detail.length > 0) {
+        setCertificates(e.detail);
+      }
+    };
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'rawf_data_certificates' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setCertificates(parsed);
+          }
+        } catch {}
+      }
+    };
+
+    window.addEventListener('rawf_certificates_reordered', handleReordered);
+    window.addEventListener('storage', handleStorageChange);
+
     const fetchCertificates = async () => {
       try {
         setLoading(true);
@@ -34,6 +65,8 @@ export const CertificatesPage: React.FC<CertificatesPageProps> = ({ onNavigate }
     fetchCertificates();
     return () => {
       isMounted = false;
+      window.removeEventListener('rawf_certificates_reordered', handleReordered);
+      window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { RawfLogo } from './RawfLogo';
+import { INITIAL_OFFICERS } from '../data/defaultAdminData';
 
 export interface DirectoryOfficer {
   id: string | number;
@@ -21,9 +22,13 @@ interface OfficersDirectoryProps {
 }
 
 const mapOfficerRecord = (o: any): DirectoryOfficer => {
-  const displayUid = o.uidNumber || o.badgeNumber || String(o.id || '');
+  const displayUid = o.uidNumber || o.uid_number || o.badgeNumber || o.badge_number || String(o.id || '');
   const stateStr = o.state || 'National HQ';
   const tag = o.tagText || (stateStr ? stateStr.split(/[-–,]/)[0].trim().toUpperCase() : 'COMMAND');
+
+  const isAssigned = o.isAssigned !== undefined
+    ? Boolean(o.isAssigned)
+    : (o.is_assigned !== undefined ? Boolean(o.is_assigned) : (o.assigned !== false));
 
   return {
     id: o.id || displayUid,
@@ -34,10 +39,10 @@ const mapOfficerRecord = (o: any): DirectoryOfficer => {
     status: o.status || 'ACTIVE',
     badgeNumber: displayUid,
     uidNumber: displayUid,
-    photoUrl: o.photoUrl || '',
+    photoUrl: o.photoUrl || o.photo_url || '',
     tagText: tag,
     tagColor: o.division === 'legal' ? 'amber' : o.status === 'COMMAND' ? 'amber' : 'blue',
-    isAssigned: o.isAssigned !== false && o.assigned !== false
+    isAssigned: isAssigned
   };
 };
 
@@ -45,7 +50,7 @@ export const OfficersDirectory: React.FC<OfficersDirectoryProps> = ({ onVerifyOf
   const [searchQuery, setSearchQuery] = useState('');
   const [showBlacklistModal, setShowBlacklistModal] = useState(false);
 
-  // Initialize ONLY from actual active officers stored in roster
+  // Initialize from active officers stored in roster cache with fallback
   const [officersList, setOfficersList] = useState<DirectoryOfficer[]>(() => {
     try {
       const saved = localStorage.getItem('rawf_data_officers');
@@ -53,79 +58,87 @@ export const OfficersDirectory: React.FC<OfficersDirectoryProps> = ({ onVerifyOf
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
           const assignedOnly = parsed
-            .filter((o: any) => o.isAssigned === true || (o.isAssigned !== false && o.assigned !== false))
+            .filter((o: any) => (o.isAssigned !== false && o.assigned !== false && o.is_assigned !== 0) && o.status !== 'REVOKED & BLACKLISTED')
             .map(mapOfficerRecord);
-          return assignedOnly;
+          if (assignedOnly.length > 0) return assignedOnly;
         }
       }
     } catch {}
 
-    // Fallback to real roster defaults if initial storage empty
-    return [
-      mapOfficerRecord({
-        id: 'RAWF/2026/1376',
-        uidNumber: 'RAWF/2026/1376',
-        badgeNumber: 'RAWF/2026/1376',
-        name: 'Andrew Paul',
-        designation: 'District Special Officer',
-        division: 'state',
-        state: 'Tamil Nadu',
-        status: 'ACTIVE',
-        photoUrl: '',
-        isAssigned: true
-      })
-    ];
+    // Fallback defaults from verified live directory
+    return INITIAL_OFFICERS
+      .filter((o: any) => (o.isAssigned !== false && o.assigned !== false && o.is_assigned !== 0) && o.status !== 'REVOKED & BLACKLISTED')
+      .map(mapOfficerRecord);
   });
 
-  // Dynamically synchronize assigned officers strictly from the active roster
+  // Dynamically synchronize assigned officers strictly from the active server roster across all browsers & devices
   useEffect(() => {
     const syncAssignedOfficers = async () => {
       try {
-        let activeRoster: any[] = [];
-
-        // 1. Primary Source of Truth: Active Officers Roster in Local Storage
-        const localSaved = localStorage.getItem('rawf_data_officers');
-        if (localSaved) {
-          const parsed = JSON.parse(localSaved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            activeRoster = parsed;
-          }
-        }
-
-        // 2. Secondary check: Fetch from server API
+        // 1. Read existing local officers cache
+        let localRoster: any[] = [];
         try {
-          const res = await fetch('/api/officers');
+          const localSaved = localStorage.getItem('rawf_data_officers');
+          if (localSaved) {
+            const parsed = JSON.parse(localSaved);
+            if (Array.isArray(parsed)) localRoster = parsed;
+          }
+        } catch {}
+
+        let finalRoster = [...localRoster];
+
+        // 2. Fetch fresh roster from server API (authoritative source of truth)
+        try {
+          const res = await fetch(`/api/officers?t=${Date.now()}`, { cache: 'no-store' });
           if (res.ok) {
             const data = await res.json();
-            if (data.success && Array.isArray(data.data) && data.data.length > 0) {
-              if (activeRoster.length === 0) {
-                activeRoster = data.data;
-              } else {
-                activeRoster = activeRoster.map((localOff) => {
-                  const match = data.data.find(
-                    (s: any) =>
-                      String(s.uidNumber || s.id).toUpperCase() ===
-                      String(localOff.uidNumber || localOff.id).toUpperCase()
-                  );
-                  return match ? { ...localOff, ...match, photoUrl: localOff.photoUrl || match.photoUrl } : localOff;
-                });
+            if (data && data.success && Array.isArray(data.data) && data.data.length > 0) {
+              const serverOfficers = data.data;
+              const serverKeySet = new Set(
+                serverOfficers.map((s: any) => String(s.uidNumber || s.badgeNumber || s.id || '').toUpperCase())
+              );
+
+              // Server is authoritative source of truth
+              const merged = serverOfficers.map((s: any) => {
+                const sKey = String(s.uidNumber || s.badgeNumber || s.id || '').toUpperCase();
+                const localMatch = localRoster.find(
+                  (l: any) => String(l.uidNumber || l.badgeNumber || l.id || '').toUpperCase() === sKey
+                );
+                return {
+                  ...(localMatch || {}),
+                  ...s, // Authoritative server values overwrite stale local cache
+                  isAssigned: s.isAssigned !== undefined ? Boolean(s.isAssigned) : (localMatch && localMatch.isAssigned !== undefined ? Boolean(localMatch.isAssigned) : true),
+                  photoUrl: s.photoUrl || localMatch?.photoUrl || ''
+                };
+              });
+
+              // Also preserve any locally added officers not yet synced to server
+              for (const loc of localRoster) {
+                const locKey = String(loc.uidNumber || loc.badgeNumber || loc.id || '').toUpperCase();
+                if (locKey && !serverKeySet.has(locKey)) {
+                  merged.push(loc);
+                }
               }
+
+              finalRoster = merged;
+              // Synchronize back into localStorage so ID card download & verification portals immediately see new officers
+              try {
+                localStorage.setItem('rawf_data_officers', JSON.stringify(finalRoster));
+              } catch {}
             }
           }
         } catch {}
 
-        if (activeRoster.length > 0) {
-          const assignedOnly = activeRoster
+        if (finalRoster.length > 0) {
+          const assignedOnly = finalRoster
             .filter((o) => {
-              const isAssigned = o.isAssigned === true || (o.isAssigned !== false && o.assigned !== false);
+              const isAssigned = o.isAssigned !== false && o.assigned !== false && o.is_assigned !== 0;
               const isNotRevoked = o.status !== 'REVOKED & BLACKLISTED';
               return isAssigned && isNotRevoked;
             })
             .map(mapOfficerRecord);
 
           setOfficersList(assignedOnly);
-        } else {
-          setOfficersList([]);
         }
       } catch (err) {
         console.warn('Error syncing assigned officers:', err);

@@ -98,13 +98,43 @@ const DEFAULT_CATEGORIES = [
 ];
 
 export const ActivitiesPage: React.FC<ActivitiesPageProps> = ({ onNavigate }) => {
-  const [activitiesList, setActivitiesList] = useState<ActivityItem[]>(DEFAULT_ACTIVITIES);
+  const [activitiesList, setActivitiesList] = useState<ActivityItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('rawf_data_activities');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return DEFAULT_ACTIVITIES;
+  });
   const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeArticle, setActiveArticle] = useState<ActivityItem | null>(null);
 
   useEffect(() => {
+    // Listen for custom order changes made in Admin Panel
+    const handleReordered = (e: any) => {
+      if (e.detail && Array.isArray(e.detail) && e.detail.length > 0) {
+        setActivitiesList(e.detail);
+      }
+    };
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'rawf_data_activities' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setActivitiesList(parsed);
+          }
+        } catch {}
+      }
+    };
+
+    window.addEventListener('rawf_activities_reordered', handleReordered);
+    window.addEventListener('storage', handleStorageChange);
+
     activitiesApi.getAll()
       .then((data) => {
         if (data.success && Array.isArray(data.data) && data.data.length > 0) {
@@ -112,7 +142,7 @@ export const ActivitiesPage: React.FC<ActivitiesPageProps> = ({ onNavigate }) =>
         }
       })
       .catch(() => {
-        // Fallback to default
+        // Fallback to default / localStorage
       });
 
     activitiesApi.getCategories()
@@ -122,6 +152,11 @@ export const ActivitiesPage: React.FC<ActivitiesPageProps> = ({ onNavigate }) =>
         }
       })
       .catch(() => {});
+
+    return () => {
+      window.removeEventListener('rawf_activities_reordered', handleReordered);
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
   const filtered = activitiesList.filter((act) => {

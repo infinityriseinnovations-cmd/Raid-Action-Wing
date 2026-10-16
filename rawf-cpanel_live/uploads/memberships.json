@@ -1,0 +1,19 @@
+[
+    {
+        "applicationId": "RAWF-MEM-30420",
+        "fullName": "Manimaran test",
+        "mobile": "6379343589",
+        "email": "manimaransma2@gmail.com",
+        "wing": "District Incharge",
+        "state": "Maharashtra",
+        "aadhaarLast4": "7895",
+        "background": "testing",
+        "transactionId": "134567895",
+        "utrNumber": "134567895",
+        "feeAmount": 5100,
+        "paymentStatus": "Paid / Under Verification",
+        "status": "Approved",
+        "submittedAt": "2026-10-14 05:33:47",
+        "assignedBadge": "RW-IND-214"
+    }
+]
